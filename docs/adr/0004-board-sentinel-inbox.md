@@ -1,0 +1,5 @@
+# O campo `board` usa a string sentinela "inbox" em vez de ser nullable
+
+Toda task pertence a um board — inclusive as que não foram atribuídas a nenhum board criado pelo usuário, que caem no board virtual "inbox" (não precisa ser criado no workspace). Cogitamos tornar o campo `board` nullable (`null` = inbox), o que seria mais "correto" em termos de tipagem, mas isso obrigaria todo consumidor do campo (filtros de `list`, renderização, sync) a checar null em vez de comparar string. Decidimos manter `board` como `z.string().nonempty()` e reservar o valor literal `"inbox"` como sentinela do board virtual — os demais valores são sempre o nanoid de um board real.
+
+Isso implica uma invariante que precisa ser respeitada pelo gerador de nanoid: o valor `"inbox"` nunca pode ser tratado como um nanoid válido gerado para um board real (colisão praticamente impossível na prática, mas a invariante precisa estar explícita, já que nada no schema a garante estruturalmente). O filtro `taskthing list --board=inbox` também é um caso especial: compara `board` direto com a string `"inbox"`, sem passar pelo `kv_store`/nanoid de um board real.

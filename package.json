@@ -1,0 +1,25 @@
+{
+  "name": "taskthing-new",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "bun run scripts/build.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.17",
+    "ink-testing-library": "^4.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "chrono-node": "^2.10.1",
+    "ink": "^7.1.1",
+    "react": "^19.2.8",
+    "react-devtools-core": "^7.0.1",
+    "rrule": "^2.8.1",
+    "zod": "^4.4.3"
+  }
+}

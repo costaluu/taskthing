@@ -1,0 +1,230 @@
+Validation
+Schema validation with Standard Schema in Bunli
+
+Bunli uses Standard Schema for validation, allowing you to use any compatible validation library.
+
+Standard Schema Support
+Standard Schema is a specification that provides a common interface for validation libraries. Bunli supports any library that implements this standard:
+
+Zod - Popular TypeScript-first schema validation
+Valibot - Modular and lightweight validation
+TypeBox - JSON Schema Type Builder
+Arktype - TypeScript's type syntax at runtime
+And many more...
+Basic Validation
+
+import { defineCommand, option } from "@bunli/core";
+import { z } from "zod";
+export default defineCommand({
+name: "deploy",
+description: "Deploy the application to a server",
+options: {
+port: option(z.coerce.number().int().min(1).max(65535), { description: "Server port" }),
+email: option(z.string().email(), { description: "Contact email" }),
+},
+handler: async ({ flags }) => {
+// flags.port is guaranteed to be 1-65535
+// flags.email is guaranteed to be valid email
+},
+});
+Validation Libraries
+Using Zod
+
+import { z } from "zod";
+export default defineCommand({
+description: "User management with Zod validation",
+options: {
+// Basic types
+name: option(z.string()),
+age: option(z.coerce.number()),
+active: option(z.coerce.boolean()),
+// With constraints
+username: option(
+z
+.string()
+.min(3)
+.max(20)
+.regex(/^[a-zA-Z0-9_]+$/),
+),
+// Optional with default
+timeout: option(z.coerce.number().default(30)),
+// Complex types
+config: option(
+z.object({
+host: z.string(),
+port: z.number(),
+secure: z.boolean(),
+}),
+),
+},
+});
+Using Valibot
+
+import \* as v from "valibot";
+export default defineCommand({
+description: "User registration with Valibot validation",
+options: {
+// Basic validation
+name: option(v.string()),
+count: option(v.pipe(v.number(), v.minValue(0), v.maxValue(100))),
+// Email validation
+email: option(v.pipe(v.string(), v.email())),
+// Custom validation
+password: option(v.pipe(v.string(), v.minLength(8), v.regex(/[A-Z]/), v.regex(/[0-9]/))),
+},
+});
+Using TypeBox
+
+import { Type } from "@sinclair/typebox";
+export default defineCommand({
+description: "Server configuration with TypeBox",
+options: {
+// JSON Schema compatible
+name: option(Type.String()),
+port: option(
+Type.Number({
+minimum: 1,
+maximum: 65535,
+}),
+),
+// Complex schema
+server: option(
+Type.Object({
+host: Type.String(),
+port: Type.Number(),
+ssl: Type.Optional(Type.Boolean()),
+}),
+),
+},
+});
+Coercion
+Bunli automatically handles string-to-type coercion for command-line inputs:
+
+export default defineCommand({
+description: "Demonstrates automatic type coercion",
+options: {
+// String inputs are coerced to numbers
+port: option(z.coerce.number()),
+// String "true"/"false" coerced to boolean
+verbose: option(z.coerce.boolean()),
+// String dates coerced to Date objects
+since: option(z.coerce.date()),
+},
+handler: async ({ flags }) => {
+// Types are properly coerced:
+// --port 3000 → flags.port is number 3000
+// --verbose true → flags.verbose is boolean true
+// --since 2024-01-01 → flags.since is Date object
+},
+});
+Custom Validation
+You can add custom validation logic:
+
+const portSchema = z.number().refine(
+(port) => !isPortInUse(port),
+(port) => ({ message: `Port ${port} is already in use` }),
+);
+export default defineCommand({
+description: "Server with custom port validation",
+options: {
+port: option(portSchema),
+},
+});
+Array and Multiple Values
+Handle multiple values for an option:
+
+export default defineCommand({
+description: "Tag and feature management",
+options: {
+// Accept multiple tags
+tags: option(z.array(z.string()), {
+description: "Tags (can be specified multiple times)",
+repeatable: true,
+}),
+// Comma-separated values
+features: option(z.string().transform((val) => val.split(","))),
+},
+});
+// Usage:
+// mycli --tags ui --tags backend --tags api
+// mycli --features auth,payments,notifications
+Error Messages
+Validation errors are automatically formatted and displayed:
+
+$ mycli deploy --port 70000 --email invalid
+Validation errors:
+--port:
+• Number must be less than or equal to 65535
+--email:
+• Invalid email
+Optional vs Required
+Control whether options are required:
+
+export default defineCommand({
+description: "Configure application options",
+options: {
+// Required option
+name: option(z.string()),
+// Optional option
+description: option(z.string().optional()),
+// Optional with default
+port: option(z.coerce.number().default(3000)),
+// Nullable option
+config: option(z.string().nullable()),
+},
+});
+Complex Validation Scenarios
+Dependent Validation
+
+const schema = z
+.object({
+mode: z.enum(["dev", "prod"]),
+debugPort: z.number().optional(),
+})
+.refine((data) => data.mode !== "prod" || !data.debugPort, {
+message: "Debug port cannot be used in production mode",
+});
+Union Types
+
+export default defineCommand({
+description: "Output format with union types",
+options: {
+output: option(
+z.union([
+z.literal("json"),
+z.literal("yaml"),
+z.literal("table"),
+z.string().regex(/^custom:/),
+]),
+),
+},
+});
+Transform and Preprocess
+
+export default defineCommand({
+description: "Data transformation and preprocessing",
+options: {
+// Parse JSON input
+data: option(z.string().transform((str) => JSON.parse(str))),
+// Normalize paths
+file: option(z.string().transform((path) => resolve(path))),
+// Parse environment variables
+env: option(
+z
+.string()
+.transform((str) => str.split(","))
+.pipe(z.array(z.enum(["dev", "test", "prod"]))),
+),
+},
+});
+Best Practices
+Use Coercion: For CLI inputs, prefer z.coerce variants
+Provide Descriptions: Help users understand valid values
+Set Sensible Defaults: Use .default() for optional configs
+Validate Early: Catch errors before processing
+Custom Error Messages: Provide helpful validation messages
+Standard Schema Adapters
+If your validation library doesn't natively support Standard Schema, you can use adapters:
+
+import { toStandardSchema } from "@standard-schema/zod";
+const schema = toStandardSchema(z.string().email());

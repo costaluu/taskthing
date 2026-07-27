@@ -1,0 +1,324 @@
+Commands
+Learn how to define and organize commands in Bunli
+
+Commands are the building blocks of your CLI. Bunli provides a powerful, type-safe way to define commands with automatic inference and validation.
+
+Basic Command
+The simplest command requires just a name and handler:
+
+import { defineCommand } from "@bunli/core";
+export default defineCommand({
+name: "hello" as const,
+description: "Say hello",
+handler: async () => {
+console.log("Hello, World!");
+},
+});
+Command Options
+Add typed options to your commands using the option() helper with Zod schemas:
+
+import { defineCommand, option } from "@bunli/core";
+import { z } from "zod";
+export default defineCommand({
+name: "greet" as const,
+description: "Greet someone",
+options: {
+name: option(z.string().min(1), { description: "Name to greet", short: "n" }),
+times: option(z.coerce.number().int().positive().default(1), {
+description: "Number of times to greet",
+short: "t",
+}),
+loud: option(z.coerce.boolean().default(false), {
+description: "Shout the greeting",
+short: "l",
+}),
+},
+handler: async ({ flags }) => {
+// TypeScript knows the exact types from Zod schemas:
+// flags.name: string
+// flags.times: number
+// flags.loud: boolean
+for (let i = 0; i < flags.times; i++) {
+const greeting = `Hello, ${flags.name}!`;
+console.log(flags.loud ? greeting.toUpperCase() : greeting);
+}
+},
+});
+All options must have a schema - there are no raw options in Bunli. This ensures type safety and validation. Use z.coerce for CLI inputs to handle string-to-type conversions automatically.
+
+Handler Context
+Every command handler receives a rich context object:
+
+handler: async ({
+flags,
+positional,
+shell,
+env,
+cwd,
+prompt,
+spinner,
+colors,
+terminal,
+runtime,
+signal,
+image,
+format,
+formatExplicit,
+agent,
+output,
+context,
+}) => {
+// flags - Parsed and validated command options
+// positional - Non-flag arguments
+// shell - Bun Shell for running commands (Bun.$)
+// env - Environment variables (process.env)
+// cwd - Current working directory
+// prompt - Interactive prompts (auto-imported from @bunli/runtime/prompt)
+// spinner - Progress indicators (auto-imported from @bunli/utils)
+// colors - Terminal colors (auto-imported from @bunli/utils)
+// terminal - Terminal information (width, height, isInteractive, isCI, etc.)
+// runtime - Runtime info (startTime, args, command, outputFormat)
+// signal - AbortSignal for cancellation
+// image - TUI image rendering options (mode, protocol, width, height)
+// format - Output format (json, yaml, toon, md)
+// formatExplicit - Whether format was explicitly set via flag
+// agent - Whether running in an AI agent context
+// output - Write formatted output
+// context - Plugin context (only present when plugins are loaded)
+};
+Commands with render run directly without TUI flags. Buffer mode defaults to standard; set tui.renderer.bufferMode: 'alternate' (globally or per-command) for fullscreen UI.
+
+Using Positional Arguments
+
+export default defineCommand({
+name: "copy" as const,
+description: "Copy files",
+handler: async ({ positional, shell }) => {
+const [source, dest] = positional;
+if (!source || !dest) {
+throw new Error("Usage: copy <source> <dest>");
+}
+await shell`cp ${source} ${dest}`;
+},
+});
+Shell Integration
+Use Bun Shell directly in your commands:
+
+handler: async ({ shell, flags }) => {
+// Run shell commands with automatic escaping
+const files = await shell`ls -la ${flags.dir}`.text();
+// Pipe commands
+const count = await shell`cat ${flags.file} | wc -l`.text();
+// Check exit codes
+try {
+await shell`test -f ${flags.file}`;
+console.log("File exists");
+} catch {
+console.log("File not found");
+}
+};
+Interactive Prompts
+
+handler: async ({ prompt, flags }) => {
+// Text input
+const name = await prompt("What is your name?");
+// Confirmation
+const proceed = await prompt.confirm("Continue?", { default: true });
+// Selection
+const color = await prompt.select("Favorite color?", {
+options: ["red", "green", "blue"],
+});
+// Password (with masking)
+const secret = await prompt.password("Enter password:");
+// With schema validation
+const apiKey = await prompt("API Key:", {
+schema: z
+.string()
+.min(32)
+.regex(/^[A-Za-z0-9-_]+$/),
+});
+};
+Progress Indicators
+
+handler: async ({ spinner, shell }) => {
+const spin = spinner("Installing dependencies...");
+spin.start();
+try {
+await shell`bun install`;
+spin.succeed("Dependencies installed");
+} catch (error) {
+spin.fail("Installation failed");
+throw error;
+}
+};
+Nested Commands
+Organize related commands hierarchically:
+
+export default defineCommand({
+name: "db" as const,
+description: "Database operations",
+commands: [
+defineCommand({
+name: "migrate" as const,
+description: "Run migrations",
+options: {
+direction: option(z.enum(["up", "down"]).default("up"), {
+description: "Migration direction",
+short: "d",
+}),
+},
+handler: async ({ flags, shell }) => {
+await shell`bun run db:migrate --direction ${flags.direction}`;
+},
+}),
+defineCommand({
+name: "seed" as const,
+description: "Seed database",
+options: {
+force: option(z.coerce.boolean().default(false), {
+description: "Force seed in production",
+short: "f",
+}),
+},
+handler: async ({ flags, env, shell }) => {
+if (env.NODE_ENV === "production" && !flags.force) {
+throw new Error("Use --force to seed in production");
+}
+await shell`bun run db:seed`;
+},
+}),
+defineCommand({
+name: "reset" as const,
+description: "Reset database",
+handler: async ({ prompt, shell }) => {
+const confirm = await prompt.confirm("Reset database? All data will be lost!");
+if (confirm) {
+await shell`bun run db:reset`;
+}
+},
+}),
+],
+});
+Command Organization
+For simple CLIs, define all commands in one file:
+
+// src/index.ts
+import { createCLI } from '@bunli/core'
+const cli = await createCLI({
+name: 'my-cli',
+version: '1.0.0',
+description: 'My CLI'
+})
+cli.command({
+name: 'serve' as const,
+description: 'Start the server',
+handler: async () => { /_ ... _/ }
+})
+cli.command({
+name: 'build' as const,
+description: 'Build the project',
+handler: async () => { /_ ... _/ }
+})
+await cli.run()
+Command Aliases
+Add shortcuts for frequently used commands:
+
+export default defineCommand({
+name: "development" as const,
+alias: ["dev", "d"], // Can be string or array
+description: "Start development server",
+handler: async () => {
+// Users can run any of:
+// my-cli development
+// my-cli dev
+// my-cli d
+},
+});
+// Aliases work with nested commands too
+export default defineCommand({
+name: "database" as const,
+alias: "db",
+commands: [
+defineCommand({
+name: "migrate" as const,
+alias: "m",
+handler: async () => {
+// Can be called as:
+// my-cli database migrate
+// my-cli db migrate
+// my-cli db m
+},
+}),
+],
+});
+Command Lookup and Execution
+Deepest-Match Algorithm
+Bunli resolves commands using a deepest-match algorithm: when you run my-cli git log, it tries to match the longest possible path first (git log as a single command), then falls back to shorter paths (git as a group, log as a subcommand).
+
+# Matches: git group → log subcommand
+
+my-cli git log --oneline
+
+# Matches: git-push as a single top-level command
+
+my-cli git-push origin main
+This means git log will always be interpreted as the git group with log subcommand, not as a top-level git-log command — even if one exists.
+
+The -- Separator
+Use -- to pass arguments through to the underlying command or shell:
+
+# Pass --force through to git push
+
+my-cli git push origin main -- --force
+
+# Useful for commands that wrap other CLIs
+
+my-cli docker run -- --rm -it my-image /bin/sh
+Arguments after -- are added to positional after the matched command's own positional arguments.
+
+Output Policy
+Commands can control when structured output is displayed using outputPolicy:
+
+export default defineCommand({
+name: "config-get",
+description: "Print a config value",
+outputPolicy: "all", // 'all' | 'agent-only'
+handler: async ({ output, flags }) => {
+output({ key: flags.key, value: getConfigValue(flags.key) });
+},
+});
+'all' — Display output to both humans (TTY) and agents (piped)
+'agent-only' — Suppress output in TTY mode; only emit for piped/agent consumers
+Bunli provides automatic error handling with formatted output:
+
+// Schema validation errors are automatically caught and formatted
+$ my-cli serve --port abc
+Validation errors:
+--port:
+• Expected number, received nan
+// Custom errors in handlers
+handler: async ({ flags, colors }) => {
+if (flags.port < 1024 && !flags.sudo) {
+throw new Error('Ports below 1024 require sudo')
+}
+}
+// Unknown commands show help
+$ my-cli unknown
+Unknown command: unknown
+// Automatic help generation
+$ my-cli serve --help
+Usage: my-cli serve [options]
+Start the development server
+Options:
+--port, -p Port to listen on (default: 3000)
+--host, -h Host to bind to (default: localhost)
+Keep command registration explicit with cli.command(...) and use defineGroup(...) for nested command trees.
+
+Best Practices
+Use descriptive names - Command names should be clear and memorable
+Add descriptions - Help users understand what each command does
+Provide examples - Show common usage patterns in descriptions
+Group related commands - Use nested commands for logical organization
+Handle errors gracefully - Provide helpful error messages
+Keep handlers focused - Each command should do one thing well
+Next Steps
