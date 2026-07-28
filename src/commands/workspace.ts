@@ -13,24 +13,16 @@ import {
   targetWorkspaceName,
   workspacePath,
 } from "../porcelain";
-import { renderWorkspaceList } from "../tui";
+import { presenter } from "../presenter";
 import { workspaceOption } from "../command-options";
 import { rejectUnknownSubcommand, subcommands } from "../hybrid-command";
 
 /** `workspace list` is also reachable as the top-level `workspaces` shortcut. */
 export async function listWorkspaces(): Promise<void> {
   // The listing marks the current one, since every unscoped command acts on
-  // it and the user needs to know which that is. A TTY gets the Selection-
-  // style list; piped stays the plain, greppable `* name` lines.
+  // it and the user needs to know which that is.
   const current = await currentWorkspaceName();
-  const workspaces = await allWorkspaces();
-  if (process.stdout.isTTY) {
-    await renderWorkspaceList(workspaces, current, await readConfig());
-  } else {
-    for (const workspace of workspaces) {
-      console.log(workspace === current ? `* ${workspace}` : `  ${workspace}`);
-    }
-  }
+  await presenter().workspaceList(await allWorkspaces(), current, await readConfig());
 }
 
 /** `workspace use <name>` is also reachable as the top-level `use` shortcut. */

@@ -1,45 +1,20 @@
 import { defineCommand, option } from "@bunli/core";
 import { z } from "zod";
 
-import { createGlobalKvStore, createKvStore, type KvStore } from "../kv-store";
+import { createGlobalKvStore, createKvStore } from "../kv-store";
 import {
   allWorkspaces,
-  boardRepository,
   currentWorkspaceName,
   dataHome,
   gatherTaskGroups,
-  inBoardFilter,
   now,
-  openWorkspace,
   readConfig,
-  taskFilter,
-  taskRepository,
   workspacePath,
   type TaskFilters,
 } from "../porcelain";
 import type { TaskGroup } from "../task-list";
-import { renderTaskList } from "../tui";
+import { presenter } from "../presenter";
 import { workspaceOption } from "../command-options";
-
-/** The plain, greppable lines a piped listing prints for one workspace. */
-async function listWorkspace(
-  name: string,
-  filters: TaskFilters,
-  store: KvStore,
-  global: boolean,
-): Promise<void> {
-  const root = workspacePath(name);
-  const { mdwal } = await openWorkspace(root);
-  const tasks = taskRepository(mdwal);
-  const boards = boardRepository(mdwal);
-
-  const shown = await tasks.filter(taskFilter(filters, await inBoardFilter(filters, boards, root)));
-
-  for (const task of shown) {
-    const number = await store.set(global ? `${name}/${task.id}` : task.id);
-    console.log(global ? `${number} ${task.title} (${name})` : `${number} ${task.title}`);
-  }
-}
 
 export default defineCommand({
   name: "list" as const,
@@ -108,20 +83,15 @@ export default defineCommand({
         : [createGlobalKvStore(dataHome()).reset()],
     );
 
-    // On an interactive terminal the styled TUI is drawn; piped (scripts, tests)
-    // gets the plain, greppable lines. A global listing spans workspaces: its board
-    // groups carry a workspace name in the header (mehorias item 2), so they gather
-    // into one board-grouped view rather than staying a flat list.
-    if (process.stdout.isTTY) {
-      const groups: TaskGroup[] = [];
-      for (const name of names) {
-        groups.push(...(await gatherTaskGroups(name, filters, store, global)));
-      }
-      await renderTaskList(groups, await readConfig(), now());
-    } else {
-      for (const name of names) {
-        await listWorkspace(name, filters, store, global);
-      }
+    // The rows are gathered once, however they end up being drawn: the numbers a
+    // listing hands out have to be the same whether the user is looking at the
+    // styled view or piping it into something. A global listing spans workspaces,
+    // so its board groups carry a workspace name (mehorias item 2).
+    const groups: TaskGroup[] = [];
+    for (const name of names) {
+      groups.push(...(await gatherTaskGroups(name, filters, store, global)));
     }
+
+    await presenter().taskList(groups, now(), await readConfig());
   },
 });

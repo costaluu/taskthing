@@ -3,29 +3,18 @@ import { z } from "zod";
 
 import { subcommands } from "../hybrid-command";
 import { buildUpdater, readConfig } from "../porcelain";
+import { presenter } from "../presenter";
 import { spinnerMessages } from "../spinner-messages";
-import { renderSpinner, runConfirmation } from "../tui";
+import { runConfirmation } from "../tui";
 
-// The check/apply pair share their shape: run the work behind a spinner on a
-// TTY, print the same copy plainly when piped so a script sees the outcome and,
-// on failure, why.
+// The check/apply pair share their shape: slow work behind a spinner, whose
+// success line the work itself picks (latest vs. a pending update).
 async function spin(
   pending: string,
   failure: (error: unknown) => string,
   run: () => Promise<string>,
 ): Promise<void> {
-  const config = await readConfig();
-  if (process.stdout.isTTY) {
-    const ok = await renderSpinner(pending, run, config);
-    if (!ok) process.exit(1);
-    return;
-  }
-  try {
-    console.log(await run());
-  } catch (error) {
-    console.error(failure(error));
-    process.exit(1);
-  }
+  await presenter().progressDynamic(pending, failure, run, await readConfig());
 }
 
 const forceOption = option(z.coerce.boolean().default(false), {

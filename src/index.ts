@@ -2,6 +2,9 @@
 import { createCLI } from "@bunli/core";
 
 import { VERSION } from "./build";
+import { inkPresenter } from "./presenter-ink";
+import { plainPresenter } from "./presenter-plain";
+import { setPresenter } from "./presenter";
 
 import add from "./commands/add";
 import board from "./commands/board";
@@ -79,6 +82,10 @@ cli.command(install);
 
 // Plumber.
 cli.command(entity);
+
+// The one place the styled/piped fork is decided: every command below draws
+// through whichever adapter is set here, and none of them asks again.
+setPresenter(process.stdout.isTTY ? inkPresenter() : plainPresenter());
 
 // `help` is a verb users already type (and `help <command>` reads the way git
 // does); Bunli spells the same thing as a global flag. Translating here is the

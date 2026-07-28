@@ -3,7 +3,7 @@ import { defineCommand } from "@bunli/core";
 import { MIGRATIONS } from "../build";
 import type { MigrationRow } from "../migration-list";
 import { readConfig, recordedMigrations, targetWorkspace } from "../porcelain";
-import { renderMigrationList } from "../tui";
+import { presenter } from "../presenter";
 import { workspaceOption } from "../command-options";
 
 /**
@@ -29,17 +29,6 @@ export default defineCommand({
       applied: recorded.has(version),
     }));
 
-    if (process.stdout.isTTY) {
-      await renderMigrationList(rows, await readConfig());
-      return;
-    }
-    for (const row of rows) {
-      console.log(`${row.number} ${row.version} ${row.applied ? "yes" : "no"}`);
-    }
-    console.log(
-      rows.some((row) => !row.applied)
-        ? "there's pending migrations. verify your taskthing installation."
-        : "this workspace has no migrations pending",
-    );
+    await presenter().migrationList(rows, await readConfig());
   },
 });

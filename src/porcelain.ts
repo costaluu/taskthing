@@ -22,7 +22,7 @@ import { summarize } from "./spinner-messages";
 import { CONFIG_MIGRATIONS, MIGRATIONS, TRANSFORMS, VERSION } from "./build";
 import { createMigrationRunner } from "./migration-runner";
 import { createUpdater, type ConfigStore, type UpdateState } from "./updater";
-import { renderOutcomeLine } from "./tui";
+import { presenter } from "./presenter";
 import type { TaskGroup } from "./task-list";
 import { boardSchema, configSchema, taskSchema, type Board, type Config, type Task } from "./schema";
 
@@ -171,18 +171,9 @@ export async function report(
 ): Promise<void> {
   const config = await readConfig();
   try {
-    const segments = await work(config);
-    if (process.stdout.isTTY) {
-      await renderOutcomeLine(segments, config);
-    } else {
-      // Piped (scripts, logs) get the same words plainly, so the outcome — and on
-      // failure its reason — is never swallowed by the styling.
-      const line = segments.map((s) => s.text).join("");
-      console.log(`${createGlyphs(config.nerdfont).success} ${line}`);
-    }
+    await presenter().outcome(await work(config), config);
   } catch (error) {
-    console.error(`${createGlyphs(config.nerdfont).failure} ${failure(error)}`);
-    process.exit(1);
+    presenter().fail(failure(error), config);
   }
 }
 
@@ -259,12 +250,11 @@ export async function reportConfig(
   const label = CONFIG_LABELS[key] ?? key;
   try {
     await write();
+    // Deliberately plain even on a terminal: the config screen has just been
+    // torn down and this line closes it, rather than opening a new ink render.
     console.log(`${glyphs.success} ${label} updated successfully!`);
   } catch (error) {
-    console.error(
-      `${glyphs.failure} something went wrong updating ${label}. error: ${summarize(error)}`,
-    );
-    process.exit(1);
+    presenter().fail(`something went wrong updating ${label}. error: ${summarize(error)}`, config);
   }
 }
 

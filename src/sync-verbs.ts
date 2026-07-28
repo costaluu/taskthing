@@ -1,5 +1,5 @@
 import { openWorkspace, readConfig, targetWorkspaceName, workspacePath } from "./porcelain";
-import { renderCommandSpinner } from "./tui";
+import { presenter } from "./presenter";
 import type { spinnerMessages } from "./spinner-messages";
 
 type Copy = ReturnType<typeof spinnerMessages.sync>;
@@ -25,19 +25,5 @@ export async function runSyncing(
 
   const { copy, operation } = plan({ name, manager });
 
-  // A TTY gets the live spinner; piped, the same copy is printed plainly so a
-  // script (or a log) sees the outcome and, on failure, why — the spinner would
-  // otherwise swallow the reason behind a half-drawn pending frame.
-  if (process.stdout.isTTY) {
-    const ok = await renderCommandSpinner(copy, operation, config);
-    if (!ok) process.exit(1);
-    return;
-  }
-  try {
-    await operation();
-    console.log(copy.success);
-  } catch (error) {
-    console.error(copy.failure(error));
-    process.exit(1);
-  }
+  await presenter().progress(copy, operation, config);
 }

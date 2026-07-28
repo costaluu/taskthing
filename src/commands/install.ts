@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createGlyphs } from "../glyph";
 import { configPath, workspacePath, writeConfig } from "../porcelain";
+import { presenter } from "../presenter";
 import { configSchema } from "../schema";
 import { summarize } from "../spinner-messages";
 import { runInstallForm } from "../tui";
@@ -56,15 +57,17 @@ export default defineCommand({
       );
     } catch (error) {
       // install owns its own outcome line, so the failure is reported here rather
-      // than re-thrown to the top-level handler that prints a bare message.
-      const glyphs = createGlyphs(nerdfont);
-      console.error(
-        `${glyphs.failure} something went wrong during installation. error: ${summarize(error)}`,
+      // than re-thrown to the top-level handler that prints a bare message. There
+      // is no config.md to read yet, so the nerdfont answer the form just
+      // collected is the only thing the glyphs can come from.
+      presenter().fail(
+        `something went wrong during installation. error: ${summarize(error)}`,
+        configSchema.parse({ currentWorkspace: "local", nerdfont }),
       );
-      process.exit(1);
     }
 
-    const glyphs = createGlyphs(nerdfont);
-    console.log(`${glyphs.success} taskthing installed successfully!`);
+    // Deliberately plain even on a terminal: this closes the install, and there
+    // is no styled outcome line to draw it into.
+    console.log(`${createGlyphs(nerdfont).success} taskthing installed successfully!`);
   },
 });

@@ -1260,6 +1260,7 @@ test("set title rewrites a task's title, and uncheck reopens a completed one", a
   }
 });
 
+// Fifteen invocations, each a process spawn, sit right on the default 5s budget.
 test("config set writes settings, refuses unknown values, and can't switch workspace", async () => {
   const home = await dataHome();
   try {
@@ -1302,7 +1303,7 @@ test("config set writes settings, refuses unknown values, and can't switch works
   } finally {
     await rm(home, { recursive: true, force: true });
   }
-});
+}, 30_000);
 
 test("add creates a task from a title alone, in the current workspace", async () => {
   const home = await dataHome();

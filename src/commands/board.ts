@@ -13,7 +13,7 @@ import {
   targetWorkspace,
   taskRepository,
 } from "../porcelain";
-import { renderBoardList } from "../tui";
+import { presenter } from "../presenter";
 import { workspaceOption } from "../command-options";
 import { rejectUnknownSubcommand, subcommands } from "../hybrid-command";
 
@@ -42,11 +42,7 @@ export async function listBoards(workspace?: string): Promise<void> {
     });
   }
 
-  if (process.stdout.isTTY) {
-    await renderBoardList(rows, await readConfig());
-  } else {
-    for (const row of rows) console.log(`${row.number} ${row.board.name}`);
-  }
+  await presenter().boardList(rows, await readConfig());
 }
 
 /** The fields `board set` may write; a board has no others to offer. */
