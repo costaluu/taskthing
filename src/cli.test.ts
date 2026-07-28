@@ -3,29 +3,89 @@ import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { buildCli } from "./app";
 import { VERSION } from "./build";
 import { createManager } from "./manager";
 import { createMdwal } from "./mdwal";
+import { CommandFailure, setPresenter, type PresenterCall } from "./presenter";
+import { recordingPresenter } from "./presenter-record";
 import { boardSchema, taskSchema } from "./schema";
 
-// The CLI seam is the entrypoint itself: tests invoke `taskthing <cmd> …` as a
-// real process against a temporary data home, then assert on the workspace files
-// it produced, on the kv_store, and on the command's plain output and exit code.
-// Styling and layout are drawn a layer above and are not asserted here.
+// The CLI seam is the command tree: tests drive `cli.execute` in process against
+// a temporary data home, then assert on the workspace files it produced, on the
+// kv_store, and on the command's plain output and exit code. Output is read back
+// through the recording presenter, which renders exactly what a pipe would see.
+//
+// A few tests still spawn the real entrypoint, because argv routing, the help
+// verb and the process's own exit code live above this seam — see `spawn` below.
 const ENTRYPOINT = join(import.meta.dir, "index.ts");
 
 interface Run {
   exitCode: number;
   stdout: string;
   stderr: string;
+  /** What was drawn, including the data the styled adapter would have been handed. */
+  calls: PresenterCall[];
 }
 
 // Natural-language dates are relative to now, so tests pin now rather than
-// asserting against a moving target. The entrypoint is a separate process, so
-// the injection travels through the environment.
+// asserting against a moving target.
 const NOW = "2026-07-22T09:00:00.000Z";
 
-async function taskthing(home: string, ...args: string[]): Promise<Run> {
+const cli = await buildCli();
+
+/**
+ * Run one command the way a piped invocation would, in this process.
+ *
+ * `path` is the command's full path — "board set name", not "board" — because
+ * `cli.execute` resolves the name it is handed and leaves the rest as arguments.
+ * Anything after it is argv: positionals and flags alike.
+ */
+async function taskthing(home: string, path: string, ...args: string[]): Promise<Run> {
+  process.env.TASKTHING_HOME = home;
+  process.env.TASKTHING_NOW = NOW;
+
+  const recorder = recordingPresenter();
+  setPresenter(recorder);
+
+  // A few lines are deliberately plain in both modes (install's closing line,
+  // the config listing, the entity plumber's log) and so never reach the
+  // presenter. They are spliced into the same sequence so a test reads one
+  // stdout regardless of which route a line took.
+  const { log, error } = console;
+  const write = process.stdout.write.bind(process.stdout);
+  console.log = (...parts: unknown[]) =>
+    void recorder.lines.push({ stream: "stdout", text: parts.join(" ") });
+  console.error = (...parts: unknown[]) =>
+    void recorder.lines.push({ stream: "stderr", text: parts.join(" ") });
+  process.stdout.write = ((chunk: string) => {
+    recorder.lines.push({ stream: "stdout", text: String(chunk) });
+    return true;
+  }) as typeof process.stdout.write;
+
+  try {
+    await cli.execute(path, args);
+    return { exitCode: 0, stdout: recorder.stdout, stderr: recorder.stderr, calls: recorder.calls };
+  } catch (error_) {
+    // Where the shipped adapters exit, the recording one throws; anything else
+    // reaching here is a handler that threw without reporting, which Bunli would
+    // have turned into a non-zero exit too.
+    const stderr =
+      error_ instanceof CommandFailure
+        ? recorder.stderr
+        : [recorder.stderr, error_ instanceof Error ? error_.message : String(error_)]
+            .filter((part) => part.length > 0)
+            .join("\n");
+    return { exitCode: 1, stdout: recorder.stdout, stderr, calls: recorder.calls };
+  } finally {
+    console.log = log;
+    console.error = error;
+    process.stdout.write = write;
+  }
+}
+
+/** Run the real binary as its own process, for what sits above the command tree. */
+async function spawn(home: string, ...args: string[]): Promise<Run> {
   const proc = Bun.spawn(["bun", ENTRYPOINT, ...args], {
     env: { ...process.env, TASKTHING_HOME: home, TASKTHING_NOW: NOW },
     stdout: "pipe",
@@ -35,7 +95,7 @@ async function taskthing(home: string, ...args: string[]): Promise<Run> {
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
   ]);
-  return { exitCode: await proc.exited, stdout, stderr };
+  return { exitCode: await proc.exited, stdout, stderr, calls: [] };
 }
 
 /** A data home with one workspace, which config.md names as the current one. */
@@ -273,7 +333,7 @@ test("a piped git-facing command surfaces why it failed, not a stalled spinner (
 test("entity create authors a CREATE_FOLDER migration line for the new folder (--log)", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "entity", "create", "list", "--log");
+    const run = await taskthing(home, "entity create", "list", "--log");
     expect(run.exitCode).toBe(0);
 
     // The output is a migration `content` line: a static mdwal log op the dev
@@ -292,7 +352,7 @@ test("entity create authors a CREATE_FOLDER migration line for the new folder (-
 test("entity rename authors a RENAME_FOLDER line naming the new folder (--log)", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "entity", "rename", "list", "collection", "--log");
+    const run = await taskthing(home, "entity rename", "list", "collection", "--log");
     expect(run.exitCode).toBe(0);
 
     const events = workspaceMdwal(home).parseEvents(run.stdout);
@@ -308,7 +368,7 @@ test("entity rename authors a RENAME_FOLDER line naming the new folder (--log)",
 test("entity delete authors a DELETE_FOLDER line (--log)", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "entity", "delete", "list", "--log");
+    const run = await taskthing(home, "entity delete", "list", "--log");
     expect(run.exitCode).toBe(0);
 
     const events = workspaceMdwal(home).parseEvents(run.stdout);
@@ -323,7 +383,7 @@ test("entity delete authors a DELETE_FOLDER line (--log)", async () => {
 test("entity without --log refuses, since it only exists to author a migration line", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "entity", "create", "list");
+    const run = await taskthing(home, "entity create", "list");
     expect(run.exitCode).toBe(1);
     expect(run.stderr).toMatch(/--log/);
   } finally {
@@ -346,7 +406,7 @@ test("`help`, no command, and --help/-h all show the command surface and exit cl
   const home = await dataHome();
   try {
     for (const args of [["help"], [] as string[], ["--help"], ["-h"]]) {
-      const run = await taskthing(home, ...args);
+      const run = await spawn(home, ...args);
       expect(run.exitCode).toBe(0);
 
       const { ok, data } = envelope(run.stdout);
@@ -367,7 +427,7 @@ test("`help`, no command, and --help/-h all show the command surface and exit cl
 test("an unknown command names itself and lists the real ones, but still fails", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "frobnicate");
+    const run = await spawn(home, "frobnicate");
     // Still a non-zero exit so scripts detect the mistake...
     expect(run.exitCode).toBe(1);
 
@@ -378,6 +438,23 @@ test("an unknown command names itself and lists the real ones, but still fails",
     // ...and the real commands come back with it, to guide the user.
     expect(error.available).toContain("add");
     expect(error.available).toContain("board");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("the entrypoint boots as its own process and runs a command end to end", async () => {
+  const home = await dataHome();
+  try {
+    // Everything else drives the command tree directly, which cannot catch a
+    // command that exists but was never registered in the entry, nor a failure
+    // to start at all. One real invocation covers both.
+    expect((await spawn(home, "add", "walk the dog")).exitCode).toBe(0);
+    expect(await workspaceMdwal(home).readAll("task")).toHaveLength(1);
+
+    const listed = await spawn(home, "list");
+    expect(listed.exitCode).toBe(0);
+    expect(listed.stdout).toContain("walk the dog");
   } finally {
     await rm(home, { recursive: true, force: true });
   }
@@ -593,6 +670,36 @@ test("--in-board scopes to a board by name, and to the virtual inbox without any
   }
 });
 
+test("a listing hands the styled view the same rows the piped one prints", async () => {
+  const home = await dataHome();
+  try {
+    const board = await workspaceMdwal(home).createEntity("board", { name: "work" });
+    await seedTask(home, { title: "at work", board: board.id });
+    await seedTask(home, { title: "unfiled" });
+
+    const run = await taskthing(home, "list");
+    const drawn = run.calls[0]!;
+    if (drawn.method !== "taskList") throw new Error(`drew ${drawn.method}, not a task list`);
+
+    // Both views come from these groups, so the numbers a user reads off the
+    // styled list are the ones a piped run would have printed — the two cannot
+    // drift apart the way separately-gathered rows could.
+    const rows = drawn.groups.flatMap((group) => group.rows);
+    expect(rows.map((row) => row.task.title).sort()).toEqual(["at work", "unfiled"]);
+    expect(rows.map((row) => row.number).sort()).toEqual([1, 2]);
+
+    for (const row of rows) {
+      expect(run.stdout).toContain(`${row.number} ${row.task.title}`);
+    }
+
+    // Grouping is the styled view's alone: it is in the rows either way, but the
+    // piped lines stay flat and in number order.
+    expect(drawn.groups).toHaveLength(2);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
 test("--global lists every workspace, and its numbers still act on the right one", async () => {
   const home = await dataHome();
   try {
@@ -636,7 +743,7 @@ test("--global lists every workspace, and its numbers still act on the right one
 test("board add creates a board, the entity naming its own verb tree", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "board", "add", "work");
+    const run = await taskthing(home, "board add", "work");
     expect(run.exitCode).toBe(0);
 
     const boards = await workspaceMdwal(home).readAll("board");
@@ -659,12 +766,12 @@ test("board add creates a board, the entity naming its own verb tree", async () 
 test("board list numbers boards in a store of their own", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "board", "add", "work");
-    await taskthing(home, "board", "add", "home");
+    await taskthing(home, "board add", "work");
+    await taskthing(home, "board add", "home");
     await taskthing(home, "add", "a task");
     await taskthing(home, "list");
 
-    const run = await taskthing(home, "board", "list");
+    const run = await taskthing(home, "board list");
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toContain("work");
     expect(run.stdout).toContain("home");
@@ -688,12 +795,12 @@ test("board list numbers boards in a store of their own", async () => {
 test("board set renames a board and gives it an icon and a colour", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "board", "add", "wrok");
-    await taskthing(home, "board", "list");
+    await taskthing(home, "board add", "wrok");
+    await taskthing(home, "board list");
 
-    expect((await taskthing(home, "board", "set", "name", "1", "work")).exitCode).toBe(0);
-    expect((await taskthing(home, "board", "set", "icon", "1", "💼")).exitCode).toBe(0);
-    expect((await taskthing(home, "board", "set", "color", "1", "blue")).exitCode).toBe(0);
+    expect((await taskthing(home, "board set name", "1", "work")).exitCode).toBe(0);
+    expect((await taskthing(home, "board set icon", "1", "💼")).exitCode).toBe(0);
+    expect((await taskthing(home, "board set color", "1", "blue")).exitCode).toBe(0);
 
     const board = (await workspaceMdwal(home).readAll("board"))[0]!;
     expect(board.name).toBe("work");
@@ -702,7 +809,7 @@ test("board set renames a board and gives it an icon and a colour", async () => 
 
     // A field the board doesn't have is a mistake worth reporting, not a new
     // field invented on the spot.
-    const bad = await taskthing(home, "board", "set", "size", "1", "large");
+    const bad = await taskthing(home, "board set", "size", "1", "large");
     expect(bad.exitCode).toBe(1);
   } finally {
     await rm(home, { recursive: true, force: true });
@@ -712,15 +819,15 @@ test("board set renames a board and gives it an icon and a colour", async () => 
 test("deleting a board sends its tasks to the inbox, and recovering it does not take them back", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "board", "add", "work");
-    await taskthing(home, "board", "list");
+    await taskthing(home, "board add", "work");
+    await taskthing(home, "board list");
     const boardId = (await kvStore(home, "boards"))["1"]!;
 
     await seedTask(home, { title: "at work", board: boardId });
     await seedTask(home, { title: "at work too", board: boardId });
     await seedTask(home, { title: "unfiled" });
 
-    expect((await taskthing(home, "board", "delete", "1")).exitCode).toBe(0);
+    expect((await taskthing(home, "board delete", "1")).exitCode).toBe(0);
 
     // A task can never be left pointing at a board that is gone, so every task
     // of that board falls back to the virtual one.
@@ -734,7 +841,7 @@ test("deleting a board sends its tasks to the inbox, and recovering it does not 
 
     // Recovering the board brings the board back, not its former tasks: each
     // task now genuinely belongs to the inbox, and only the user can move it.
-    expect((await taskthing(home, "board", "recover", boardId)).exitCode).toBe(0);
+    expect((await taskthing(home, "board recover", boardId)).exitCode).toBe(0);
     expect((await workspaceMdwal(home).read("board", boardId)).deleted).toBe(false);
 
     const after = await workspaceMdwal(home).readAll("task");
@@ -929,13 +1036,13 @@ test("unstar undoes star, and set writes a task's description and date", async (
     expect((await workspaceMdwal(home).readAll("task"))[0]!.star).toBe(false);
 
     expect(
-      (await taskthing(home, "set", "description", "1", "walk him twice")).exitCode,
+      (await taskthing(home, "set description", "1", "walk him twice")).exitCode,
     ).toBe(0);
     expect((await workspaceMdwal(home).readAll("task"))[0]!.description).toBe("walk him twice");
 
     // A task's date is its DTSTART: setting it rewrites where the task sits in
     // time, without inventing a parallel date field.
-    expect((await taskthing(home, "set", "date-time", "1", "tomorrow")).exitCode).toBe(0);
+    expect((await taskthing(home, "set date-time", "1", "tomorrow")).exitCode).toBe(0);
     expect((await workspaceMdwal(home).readAll("task"))[0]!.rrule).toBe(
       "DTSTART:20260723T090000Z",
     );
@@ -952,7 +1059,7 @@ test("unstar undoes star, and set writes a task's description and date", async (
       .find((line) => line.includes("water plants"))!
       .split(" ")[0]!;
 
-    await taskthing(home, "set", "date-time", recurring, "2026-08-10 09:00 UTC");
+    await taskthing(home, "set date-time", recurring, "2026-08-10 09:00 UTC");
     const moved = (await workspaceMdwal(home).readAll("task")).find(
       (t) => t.title === "water plants",
     )!;
@@ -979,14 +1086,14 @@ test("--workspace points a command at another workspace, leaving the current one
     // The numbers a scoped listing hands out belong to that workspace, and the
     // commands that consume them must follow the flag too.
     await taskthing(home, "star", "1", "--workspace=home");
-    await taskthing(home, "set", "description", "1", "--workspace=home", "under the sink");
+    await taskthing(home, "set description", "1", "--workspace=home", "under the sink");
 
     const there = (await workspaceMdwal(home, "home").readAll("task"))[0]!;
     expect(there.star).toBe(true);
     expect(there.description).toBe("under the sink");
 
     // Boards are workspace-scoped in the same way.
-    await taskthing(home, "board", "add", "plumbing", "--workspace=home");
+    await taskthing(home, "board add", "plumbing", "--workspace=home");
     expect(await workspaceMdwal(home, "home").readAll("board")).toHaveLength(1);
     expect(await workspaceMdwal(home).readAll("board")).toHaveLength(0);
   } finally {
@@ -1031,9 +1138,9 @@ test("--period keeps only the tasks dated inside a window from now", async () =>
 test("workspace create, list, use and rename move the current workspace around", async () => {
   const home = await dataHome();
   try {
-    expect((await taskthing(home, "workspace", "create", "work")).exitCode).toBe(0);
+    expect((await taskthing(home, "workspace create", "work")).exitCode).toBe(0);
 
-    const listed = await taskthing(home, "workspace", "list");
+    const listed = await taskthing(home, "workspace list");
     expect(listed.stdout).toContain("main");
     expect(listed.stdout).toContain("work");
 
@@ -1049,8 +1156,8 @@ test("workspace create, list, use and rename move the current workspace around",
     expect(await workspaceMdwal(home).readAll("task")).toHaveLength(0);
 
     // Renaming carries the workspace's contents, and follows the current one.
-    expect((await taskthing(home, "workspace", "rename", "work", "office")).exitCode).toBe(0);
-    expect((await taskthing(home, "workspace", "list")).stdout).toContain("office");
+    expect((await taskthing(home, "workspace rename", "work", "office")).exitCode).toBe(0);
+    expect((await taskthing(home, "workspace list")).stdout).toContain("office");
     expect(await workspaceMdwal(home, "office").readAll("task")).toHaveLength(1);
 
     await taskthing(home, "add", "still following");
@@ -1063,23 +1170,23 @@ test("workspace create, list, use and rename move the current workspace around",
 test("workspace delete refuses the active one, and needs confirming", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "workspace", "create", "scratch");
+    await taskthing(home, "workspace create", "scratch");
 
     // Deleting the active workspace would leave the user with no current one.
-    const active = await taskthing(home, "workspace", "delete", "main");
+    const active = await taskthing(home, "workspace delete", "main");
     expect(active.exitCode).toBe(1);
     expect(active.stderr).toMatch(/current|active/i);
 
     // Deleting any other is destructive — it removes the local folder — so it
     // takes an explicit confirmation.
-    const unconfirmed = await taskthing(home, "workspace", "delete", "scratch");
+    const unconfirmed = await taskthing(home, "workspace delete", "scratch");
     expect(unconfirmed.exitCode).toBe(1);
     expect(unconfirmed.stderr).toMatch(/confirm/i);
-    expect((await taskthing(home, "workspace", "list")).stdout).toContain("scratch");
+    expect((await taskthing(home, "workspace list")).stdout).toContain("scratch");
 
-    const confirmed = await taskthing(home, "workspace", "delete", "scratch", "--confirm");
+    const confirmed = await taskthing(home, "workspace delete", "scratch", "--confirm");
     expect(confirmed.exitCode).toBe(0);
-    expect((await taskthing(home, "workspace", "list")).stdout).not.toContain("scratch");
+    expect((await taskthing(home, "workspace list")).stdout).not.toContain("scratch");
   } finally {
     await rm(home, { recursive: true, force: true });
   }
@@ -1092,7 +1199,7 @@ test("workspace remote add associates the workspace, and remove detaches it", as
     await Bun.$`git init --bare --initial-branch=master ${remote}`.quiet();
     await taskthing(home, "add", "written before sharing");
 
-    expect((await taskthing(home, "workspace", "remote", "add", remote)).exitCode).toBe(0);
+    expect((await taskthing(home, "workspace remote add", remote)).exitCode).toBe(0);
 
     // The branch model exists on the remote. This remote was empty, so this
     // workspace bootstraps it: the work that predates the association travels
@@ -1113,7 +1220,7 @@ test("workspace remote add associates the workspace, and remove detaches it", as
     expect(events.filter((e) => e.op === "CREATE")).toHaveLength(1);
     expect(events[0]!.payload.snapshot.title).toBe("written after");
 
-    expect((await taskthing(home, "workspace", "remote", "remove")).exitCode).toBe(0);
+    expect((await taskthing(home, "workspace remote remove")).exitCode).toBe(0);
 
     // Detaching leaves the remote alone — other peers are unaffected — and the
     // local tasks survive; the workspace simply stops logging.
@@ -1136,7 +1243,7 @@ test("sync publishes this peer's events, and pull re-derives from master", async
   const remote = await mkdtemp(join(tmpdir(), "tt-remote-"));
   try {
     await Bun.$`git init --bare --initial-branch=master ${remote}`.quiet();
-    await taskthing(home, "workspace", "remote", "add", remote);
+    await taskthing(home, "workspace remote add", remote);
     await taskthing(home, "add", "walk the dog");
 
     expect((await taskthing(home, "sync")).exitCode).toBe(0);
@@ -1181,7 +1288,7 @@ test("rebuild consolidates into master, and truncate bounds a branch's history",
   const remote = await mkdtemp(join(tmpdir(), "tt-remote-"));
   try {
     await Bun.$`git init --bare --initial-branch=master ${remote}`.quiet();
-    await taskthing(home, "workspace", "remote", "add", remote);
+    await taskthing(home, "workspace remote add", remote);
 
     for (const title of ["one", "two", "three"]) {
       await taskthing(home, "add", title);
@@ -1228,7 +1335,7 @@ test("set title rewrites a task's title, and uncheck reopens a completed one", a
     await taskthing(home, "add", "walk the dgo");
     await taskthing(home, "list");
 
-    expect((await taskthing(home, "set", "title", "1", "walk the dog")).exitCode).toBe(0);
+    expect((await taskthing(home, "set title", "1", "walk the dog")).exitCode).toBe(0);
     expect((await workspaceMdwal(home).readAll("task"))[0]!.title).toBe("walk the dog");
 
     await taskthing(home, "check", "1");
@@ -1260,12 +1367,11 @@ test("set title rewrites a task's title, and uncheck reopens a completed one", a
   }
 });
 
-// Fifteen invocations, each a process spawn, sit right on the default 5s budget.
 test("config set writes settings, refuses unknown values, and can't switch workspace", async () => {
   const home = await dataHome();
   try {
-    expect((await taskthing(home, "config", "set", "dateFormat", "europe")).exitCode).toBe(0);
-    expect((await taskthing(home, "config", "set", "nerdfont", "true")).exitCode).toBe(0);
+    expect((await taskthing(home, "config set", "dateFormat", "europe")).exitCode).toBe(0);
+    expect((await taskthing(home, "config set", "nerdfont", "true")).exitCode).toBe(0);
 
     const shown = await taskthing(home, "config");
     expect(shown.stdout).toContain("europe");
@@ -1273,26 +1379,26 @@ test("config set writes settings, refuses unknown values, and can't switch works
 
     // A cadence level (mehorias item 10) is a bare string in frontmatter, so it
     // is coerced to a number and stored — later read back and printed as one.
-    expect((await taskthing(home, "config", "set", "autoSync", "6")).exitCode).toBe(0);
+    expect((await taskthing(home, "config set", "autoSync", "6")).exitCode).toBe(0);
     expect((await taskthing(home, "config")).stdout).toContain("autoSync 6");
 
     // A cadence must be a positive integer: zero, negative, and non-numeric
     // values are all refused rather than silently stored.
     for (const junk of ["0", "-1", "nope"]) {
-      const rejected = await taskthing(home, "config", "set", "autoRebuild", junk);
+      const rejected = await taskthing(home, "config set", "autoRebuild", junk);
       expect(rejected.exitCode).toBe(1);
     }
 
     // A date format outside the supported set is refused: rendering has to know
     // how to draw it.
-    const bad = await taskthing(home, "config", "set", "dateFormat", "klingon");
+    const bad = await taskthing(home, "config set", "dateFormat", "klingon");
     expect(bad.exitCode).toBe(1);
     expect(bad.stderr).toMatch(/america|europe/i);
 
     // The current workspace lives in config.md too, but is deliberately not
     // settable here — it moves only through `use`, so nothing changes it as a
     // side effect.
-    const workspace = await taskthing(home, "config", "set", "currentWorkspace", "other");
+    const workspace = await taskthing(home, "config set", "currentWorkspace", "other");
     expect(workspace.exitCode).toBe(1);
     expect(workspace.stderr).toMatch(/use/i);
 
@@ -1303,7 +1409,7 @@ test("config set writes settings, refuses unknown values, and can't switch works
   } finally {
     await rm(home, { recursive: true, force: true });
   }
-}, 30_000);
+});
 
 test("add creates a task from a title alone, in the current workspace", async () => {
   const home = await dataHome();
@@ -1445,7 +1551,7 @@ test("update check reports the cached pending update without hitting the network
     autoUpdate: "confirm",
   });
   try {
-    const run = await taskthing(home, "update", "check");
+    const run = await taskthing(home, "update check");
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toContain("there's a pending update 0.1.0 → 9.9.9!");
   } finally {
@@ -1461,7 +1567,7 @@ test("update apply reports up-to-date from a fresh cache, without downloading", 
     autoUpdate: "confirm",
   });
   try {
-    const run = await taskthing(home, "update", "apply");
+    const run = await taskthing(home, "update apply");
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toContain("you're on the latest version!");
   } finally {

@@ -1,4 +1,4 @@
-import { plainLines } from "./presenter-plain";
+import { plainLines, type PlainLine } from "./presenter-plain";
 import { CommandFailure, type Presenter, type PresenterCall } from "./presenter";
 import type { Config } from "./schema";
 
@@ -15,36 +15,43 @@ import type { Config } from "./schema";
 // anyway.
 
 export interface RecordingPresenter extends Presenter {
+  /** What the command asked to draw, in order — including the ink adapter's inputs. */
   readonly calls: PresenterCall[];
+  /**
+   * The plain lines, rendered as they were recorded. Mutable so a harness can
+   * splice in what a command wrote straight to the console — a handful of lines
+   * are deliberately plain in both modes and never reach the presenter.
+   */
+  readonly lines: PlainLine[];
   readonly stdout: string;
   readonly stderr: string;
 }
 
 export function recordingPresenter(): RecordingPresenter {
   const calls: PresenterCall[] = [];
-  // Each call is rendered with the config it was drawn with, since that decides
-  // the glyphs.
-  const configs: Config[] = [];
+  const lines: PlainLine[] = [];
 
+  // Rendered as it is recorded rather than on demand, so console output a
+  // harness splices in keeps its place in the sequence.
   const record = (call: PresenterCall, config: Config) => {
     calls.push(call);
-    configs.push(config);
+    lines.push(...plainLines(call, config));
   };
 
-  const lines = (stream: "stdout" | "stderr") =>
-    calls
-      .flatMap((call, index) => plainLines(call, configs[index]!))
+  const joined = (stream: "stdout" | "stderr") =>
+    lines
       .filter((line) => line.stream === stream)
       .map((line) => line.text)
       .join("\n");
 
   return {
     calls,
+    lines,
     get stdout() {
-      return lines("stdout");
+      return joined("stdout");
     },
     get stderr() {
-      return lines("stderr");
+      return joined("stderr");
     },
 
     async outcome(segments, config) {
