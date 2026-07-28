@@ -445,8 +445,7 @@ por padrão, --checked está como falso
 3. taskthing set --board icon <id> <icon-string> --workspace=<workspace-name>
 4. taskthing set --board color <id> <ansi-color-name> --workspace=<workspace-name>
 
-a cor do board também é ANSI 16 (um dos índices 0-15, escolhido via UI de seleção entre um conjunto pré-definido de nomes de cor), consistente com a ADR-0005 — nunca hex/RGB arbitrário. dá ao usuário alguma opção de escolha sem reabrir a exceção de RGB.
-5. taskthing delete --board <id> --workspace=<workspace-name>
+a cor do board também é ANSI 16 (um dos índices 0-15, escolhido via UI de seleção entre um conjunto pré-definido de nomes de cor), consistente com a ADR-0005 — nunca hex/RGB arbitrário. dá ao usuário alguma opção de escolha sem reabrir a exceção de RGB. 5. taskthing delete --board <id> --workspace=<workspace-name>
 
 6. taskthing list --board --workspace=<workspace-name>
 
@@ -555,7 +554,7 @@ NerdFont support:
 
 Definições:
 
-<title> = texto "Tasks" com um backgroun e em negrito um título pequeno porém com personalidade.
+<title> = texto "TASKS" com um backgroun e em negrito um título pequeno porém com personalidade.
 
 <board> = força um underline e negrito em todo o texto dentro inclusive pela cor definida pelo board
 <board-icon> = o ícone do board
@@ -578,11 +577,11 @@ No caso do inbox que é um board virtual ele terá o ícone:
 - Datas com mais de um ano = <year>. cor secundária com pouca importância
 
 assimetria intencional: passado usa contagem relativa ("N days ago") pra dar noção de atraso; futuro (além de "tomorrow") usa data absoluta, não "in N days", já que o objetivo do futuro é facilitar planejamento (saber a data exata), não medir distância.
-  date-time não deverá ser renderizado de forma tradicional quando a tarefa estiver completa, ao qual deverá ser mostrada um texto pleno de cor secundária com underline (cinza) a data completa de completação respeitando o formato escolhido pelo usuário.
-  <star> = ⭐ para setups sem nerdfont e 󰩳 amarelo com suporte a nerdfonts, caso a tarefa não tenha star simplesmente não renderiza nada.
-  <task-title> = titulo da tarefa em texto pleno
-  <description> = destaca que a task tem uma descrição através dos símbolos 📄 sem suporte a nerd-font e 󰆈 (U+F0188) para nerd-font, com cor secundária; caso a tarefa não tenha descrição não renderiza nada.
-  <recurring> = destaca que a task é recorrente através dos simbolos que são 🔄 sem suporte a nerd-font e  para nerd-font com uma cor de destaque diferente das demais
+date-time não deverá ser renderizado de forma tradicional quando a tarefa estiver completa, ao qual deverá ser mostrada um texto pleno de cor secundária com underline (cinza) a data completa de completação respeitando o formato escolhido pelo usuário.
+<star> = ⭐ para setups sem nerdfont e 󰩳 amarelo com suporte a nerdfonts, caso a tarefa não tenha star simplesmente não renderiza nada.
+<task-title> = titulo da tarefa em texto pleno
+<description> = destaca que a task tem uma descrição através dos símbolos 📄 sem suporte a nerd-font e 󰆈 (U+F0188) para nerd-font, com cor secundária; caso a tarefa não tenha descrição não renderiza nada.
+<recurring> = destaca que a task é recorrente através dos simbolos que são 🔄 sem suporte a nerd-font e  para nerd-font com uma cor de destaque diferente das demais
 
 Renderização:
 
@@ -600,7 +599,7 @@ Como da para perceber os números estão diretamente ligados ao kv-store.
 
 Definições:
 
-<title> = texto "Boards" com um backgroun e em negrito um título pequeno porém com personalidade.
+<title> = texto "BOARDS" com um backgroun e em negrito um título pequeno porém com personalidade.
 
 <board> = força um underline e negrito em todo o texto dentro inclusive pela cor definida pelo board
 <board-icon> = o ícone do board
@@ -623,7 +622,7 @@ Renderização:
 
 Definições:
 
-<title> = texto "Migrations" com um background e em negrito um título pequeno porém com personalidade.
+<title> = texto "MIGRATIONS" com um background e em negrito um título pequeno porém com personalidade.
 
 <version> = a versão da migração
 <applied?> = se a migração foi aplicada ou não <yes|no>

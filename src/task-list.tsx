@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Box, Text } from "ink";
 
 import { createGlyphs } from "./glyph";
@@ -10,7 +11,7 @@ import type { Task } from "./schema";
 
 // ── task list ────────────────────────────────────────────────────────────────
 //
-// Draws the plain data Spec 0003's `list` produces (story 14-25): a "Tasks"
+// Draws the plain data Spec 0003's `list` produces (story 14-25): a "TASKS"
 // title, tasks grouped under their board header, each line numbered from the
 // kv_store and laid out as `<check> <date> <star> <title> <recurring>`. It only
 // draws — no command logic, no kv_store, no git. Colour goes through the theme
@@ -68,9 +69,9 @@ export function TaskList({
           ? inkColor(theme.color("inbox-accent"))
           : group.board.color;
         return (
-          <>
+          <Fragment key={`${group.workspace ?? ""}/${group.board.id}`}>
             <Text> </Text>
-            <Box key={`${group.workspace ?? ""}/${group.board.id}`} flexDirection="column">
+            <Box flexDirection="column">
               <Text bold underline color={headerColor}>
                 {icon} {group.board.name}
                 {group.workspace !== undefined && ` (${group.workspace})`}
@@ -123,7 +124,7 @@ export function TaskList({
                 );
               })}
             </Box>
-          </>
+          </Fragment>
         );
       })}
     </Box>

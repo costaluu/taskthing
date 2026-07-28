@@ -18,7 +18,9 @@ const RIGHT = String.fromCharCode(27) + "[C";
 const LEFT = String.fromCharCode(27) + "[D";
 
 test("it lists every role with its index, a help line, and a live task preview", () => {
-  const { lastFrame } = render(<ThemeScreen theme={theme} onSubmit={() => {}} />);
+  const { lastFrame } = render(
+    <ThemeScreen theme={theme} onSubmit={() => {}} />,
+  );
 
   const frame = lastFrame() ?? "";
   // A guiding help line — every TUI carries one (mehorias item 9).
@@ -28,13 +30,15 @@ test("it lists every role with its index, a help line, and a live task preview",
   expect(frame).toContain("text-secondary");
   expect(frame).toContain("< ansi 4 >"); // highlight's default index
   // The dummy workspace beneath the rows previews the theme.
-  expect(frame).toContain("Tasks");
+  expect(frame).toContain("TASKS");
   expect(frame).toContain("team standup");
 });
 
 test("submitting an untouched map returns the empty (default) theme value", async () => {
   let value: string | undefined;
-  const { stdin } = render(<ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />);
+  const { stdin } = render(
+    <ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />,
+  );
 
   stdin.write("\r");
   await tick();
@@ -43,7 +47,9 @@ test("submitting an untouched map returns the empty (default) theme value", asyn
 
 test("recolouring a role saves only that override as JSON", async () => {
   let value: string | undefined;
-  const { lastFrame, stdin } = render(<ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />);
+  const { lastFrame, stdin } = render(
+    <ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />,
+  );
 
   // The cursor opens on the first role (highlight, default index 4). One step
   // right advances it to 5, which the row reflects live.
@@ -58,7 +64,9 @@ test("recolouring a role saves only that override as JSON", async () => {
 
 test("←/→ wrap within the 16 ANSI slots", async () => {
   let value: string | undefined;
-  const { stdin } = render(<ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />);
+  const { stdin } = render(
+    <ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />,
+  );
 
   // highlight defaults to 4; four steps left lands on 0, one more wraps to 15.
   for (let i = 0; i < 5; i++) {
@@ -72,7 +80,9 @@ test("←/→ wrap within the 16 ANSI slots", async () => {
 
 test("↑/↓ move the cursor between roles", async () => {
   let value: string | undefined;
-  const { stdin } = render(<ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />);
+  const { stdin } = render(
+    <ThemeScreen theme={theme} onSubmit={(v) => (value = v)} />,
+  );
 
   // Down to the second role (error, default 1), bump it, then back up and bump
   // the first (highlight, default 4): both overrides are saved.

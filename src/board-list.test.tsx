@@ -5,7 +5,7 @@ import { BoardList } from "./board-list";
 import { createTheme } from "./theme";
 
 // The board list draws the plain data Spec 0003's `boards` produces (story
-// 26-28): a "Boards" title and each board numbered from the kv_store, drawn in
+// 26-28): a "BOARDS" title and each board numbered from the kv_store, drawn in
 // its own colour with its icon and name. The virtual inbox uses its accent role.
 
 const theme = createTheme();
@@ -20,7 +20,7 @@ test("it draws the Boards title and a numbered board with its icon and name", ()
   ]);
 
   const frame = lastFrame() ?? "";
-  expect(frame).toContain("Boards");
+  expect(frame).toContain("BOARDS");
   expect(frame).toContain("1.");
   expect(frame).toContain("W");
   expect(frame).toContain("work");
@@ -30,7 +30,7 @@ test("an empty row list shows an empty-state message instead of nothing", () => 
   const { lastFrame } = renderBoards([]);
 
   const frame = lastFrame() ?? "";
-  expect(frame).toContain("Boards");
+  expect(frame).toContain("BOARDS");
   expect(frame).toContain("no boards here");
 });
 

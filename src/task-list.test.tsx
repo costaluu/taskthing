@@ -6,7 +6,7 @@ import { createTheme } from "./theme";
 import { taskSchema } from "./schema";
 
 // The task list draws the plain data Spec 0003's `list` produces (story 14-25):
-// a "Tasks" title, tasks grouped under their board header, each line numbered
+// a "TASKS" title, tasks grouped under their board header, each line numbered
 // from the kv_store and laid out as `<check> <date> <star> <title> <recurring>`.
 // It composes theme + glyph + the date formatter. Tests feed it fixtures and
 // assert on the rendered frame text/structure.
@@ -18,7 +18,13 @@ const inbox = { id: "inbox", name: "inbox", icon: "", color: "" };
 
 function renderTasks(groups: Parameters<typeof TaskList>[0]["groups"]) {
   return render(
-    <TaskList groups={groups} now={NOW} dateFormat="america" nerdfont={false} theme={theme} />,
+    <TaskList
+      groups={groups}
+      now={NOW}
+      dateFormat="america"
+      nerdfont={false}
+      theme={theme}
+    />,
   );
 }
 
@@ -30,7 +36,7 @@ test("it draws the Tasks title and a numbered task line", () => {
   ]);
 
   const frame = lastFrame() ?? "";
-  expect(frame).toContain("Tasks");
+  expect(frame).toContain("TASKS");
   // Numbered from the kv_store, an open task shows the empty checkbox fallback
   // and its plain title.
   expect(frame).toContain("1.");
@@ -61,7 +67,11 @@ test("tasks group under a board header; inbox uses its own glyph", () => {
 test("each line shows its date via the date formatter", () => {
   const today = taskSchema.parse({ id: "t1", title: "due today" });
   const overdue = taskSchema.parse({ id: "t2", title: "late" });
-  const done = taskSchema.parse({ id: "t3", title: "finished", completed: true });
+  const done = taskSchema.parse({
+    id: "t3",
+    title: "finished",
+    completed: true,
+  });
 
   const { lastFrame } = renderTasks([
     {
@@ -85,19 +95,25 @@ test("an empty group list shows an empty-state message instead of nothing", () =
   const { lastFrame } = renderTasks([]);
 
   const frame = lastFrame() ?? "";
-  expect(frame).toContain("Tasks");
+  expect(frame).toContain("TASKS");
   expect(frame).toContain("no tasks here");
 });
 
 test("star and recurrence markers show only when they apply", () => {
   const plain = taskSchema.parse({ id: "t1", title: "plain" });
-  const bare = renderTasks([{ board: inbox, rows: [{ number: 1, task: plain, date: null }] }]);
+  const bare = renderTasks([
+    { board: inbox, rows: [{ number: 1, task: plain, date: null }] },
+  ]);
   const bareFrame = bare.lastFrame() ?? "";
   // Nothing to mark: no star, no recurrence glyph (story 22/24).
   expect(bareFrame).not.toContain("⭐");
   expect(bareFrame).not.toContain("🔄");
 
-  const starred = taskSchema.parse({ id: "t2", title: "important", star: true });
+  const starred = taskSchema.parse({
+    id: "t2",
+    title: "important",
+    star: true,
+  });
   const recurring = taskSchema.parse({
     id: "t3",
     title: "weekly",
@@ -120,7 +136,11 @@ test("star and recurrence markers show only when they apply", () => {
 test("a described task carries the description glyph, an undescribed one does not", () => {
   // Story: a task with notes gets one extra marker (📄 without nerdfont), so a
   // listing shows at a glance which tasks carry more than their title.
-  const described = taskSchema.parse({ id: "t1", title: "has notes", description: "the details" });
+  const described = taskSchema.parse({
+    id: "t1",
+    title: "has notes",
+    description: "the details",
+  });
   const plain = taskSchema.parse({ id: "t2", title: "no notes" });
 
   const { lastFrame } = renderTasks([

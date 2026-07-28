@@ -13,7 +13,7 @@ const PENDING =
 // ── migration list ───────────────────────────────────────────────────────────
 //
 // Draws the plain data Spec 0003's `migrations` produces (story 29-31): a
-// "Migrations" title, each known migration numbered from the kv_store as
+// "MIGRATIONS" title, each known migration numbered from the kv_store as
 // `<version> <applied?>`, and a closing validation message that tells the user
 // whether every migration has been applied.
 

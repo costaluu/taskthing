@@ -7,7 +7,7 @@ import type { Theme } from "./theme";
 
 // ── board list ───────────────────────────────────────────────────────────────
 //
-// Draws the plain data Spec 0003's `boards` produces (story 26-28): a "Boards"
+// Draws the plain data Spec 0003's `boards` produces (story 26-28): a "BOARDS"
 // title and each board numbered from the kv_store, underlined + bold in its own
 // colour with its icon and name. The virtual inbox uses its `inbox-accent` role
 // and glyph, consistent with the task view.

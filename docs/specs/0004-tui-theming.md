@@ -17,15 +17,15 @@
 
 ## Problem Statement
 
-The porcelain layer (Spec 0003) knows *what* to show (an ordered list of tasks, a board, a parsed
-recurrence to confirm, a set of date-format choices) and *what* to collect (a y/n answer, a selected
+The porcelain layer (Spec 0003) knows _what_ to show (an ordered list of tasks, a board, a parsed
+recurrence to confirm, a set of date-format choices) and _what_ to collect (a y/n answer, a selected
 option, a custom-theme JSON), but it deliberately produces and consumes **plain data** — it draws
 nothing. Several things are still missing before taskthing is usable:
 
 - **Async commands give no feedback.** `install`, `update check/apply`, `sync`, `rebuild`, `pull`, and
   `truncate` are inherently slow; a user staring at a frozen terminal can't tell success from hang.
 - **Listings are unreadable as plain text.** A task line carries a lot of meaning — completion state,
-  a date whose *color and phrasing* encode overdue-ness, a star, a recurrence marker, the board it
+  a date whose _color and phrasing_ encode overdue-ness, a star, a recurrence marker, the board it
   belongs to — that only lands with deliberate styling.
 - **Interactive edits have no surface.** Confirmations (destructive workspace/remote ops, recurrence
   parsing), finite-option selection (date format, theme mode), and free-text entry (`set` values,
@@ -94,14 +94,14 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
     terminal state.
 12. As a user, I want each command's messages to match CONTEXT's copy, parameterized by the relevant name
     (e.g. `syncing <workspace>…` → `<workspace> synchronized!`; `updating taskthing…` → `taskthing updated
-    to version <target>`; update-check's three outcomes: latest / pending `<current> → <target>` / error),
+to version <target>`; update-check's three outcomes: latest / pending `<current> → <target>` / error),
     so that feedback is specific, not generic.
 13. As a user, I want failure lines to show a **summarized** error (not a raw stack trace), so that the
     outcome is legible.
 
 ### List rendering — tasks
 
-14. As a user, I want a listing headed by a small, bold, background-accented **"Tasks"** title, so that
+14. As a user, I want a listing headed by a small, bold, background-accented **"TASKS"** title, so that
     the view has a clear, characterful header.
 15. As a user, I want tasks grouped under their **board** header — the board rendered underlined + bold in
     the board's own color, with its icon and name — so that I see which board each group belongs to.
@@ -120,7 +120,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
     - later this year → `"<day> <month>"` (e.g. `21 aug`) in a low-importance secondary color;
     - within a year but next year → `"<month> <year>"` secondary;
     - more than a year out → `"<year>"` secondary,
-    so that overdue-ness and near-future dates are readable at a glance.
+      so that overdue-ness and near-future dates are readable at a glance.
 20. As a user, I want the **asymmetry** — past uses relative counting (`N days ago`) to convey lateness,
     future (beyond tomorrow) uses absolute dates for planning — so that each direction serves its purpose.
 21. As a user, I want a **completed** task's date rendered differently: full completion date/time (the
@@ -136,7 +136,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
 
 ### List rendering — boards
 
-26. As a user, I want a listing headed by a small, bold, background-accented **"Boards"** title.
+26. As a user, I want a listing headed by a small, bold, background-accented **"BOARDS"** title.
 27. As a user, I want each board numbered (from the boards `kv_store`) and rendered underlined + bold in its
     own color with its icon and name, so that boards are distinguishable and actionable by number.
 28. As a user, I want inbox shown with its `inbox-accent` role here too, so that the virtual board is
@@ -144,7 +144,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
 
 ### List rendering — migrations
 
-29. As a user, I want a listing headed by a small, bold, background-accented **"Migrations"** title.
+29. As a user, I want a listing headed by a small, bold, background-accented **"MIGRATIONS"** title.
 30. As a user, I want each applied/known migration listed as `<version> <applied?>` (yes/no), numbered from
     the migrations `kv_store`, so that I can audit migration state.
 31. As a user, I want a closing **validation message** — "no migrations pending" (info) or "there's pending
@@ -161,7 +161,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
     and especially 1.3 which permanently deletes local content), so that associating never loses data
     silently — 1.3 has no bypass flag (the requirement is fixed in Spec 0002; this spec draws it).
 35. As a user, I want the **recurrence confirmation** on `set date-time` (and recurring `add`) to show the
-    *parsed* result, not a generic prompt — e.g. `"every monday, starting tomorrow (23 jul) — confirm?"` —
+    _parsed_ result, not a generic prompt — e.g. `"every monday, starting tomorrow (23 jul) — confirm?"` —
     so that I catch a parsing mistake before saving (the parsed string comes from Spec 0003).
 
 ### Selection UI
@@ -210,7 +210,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
   integer indices 0–15). Exposes a resolver `color(role) -> ansiIndex` used by every renderer. **Never**
   emits RGB (ADR-0005). Roles include at least: `highlight`, `error`, `success`, `warning`,
   `text-secondary`, `inbox-accent`, the date buckets' danger/highlight/secondary shades, and board-title
-  styling. (Exact role catalog finalized in implementation; the *contract* is role→index-only.)
+  styling. (Exact role catalog finalized in implementation; the _contract_ is role→index-only.)
 - **Glyph module** — every glyph as a `{ nerdfont, fallback }` pair, resolved against the `nerdfont`
   config flag. Covers: spinner frames (`⣾…`), success/failure (`✓`/`𐄂`), check-marks (`[ ]`/`[x]`),
   inbox (`📬`), star (`⭐`), recurrence (`🔄`), selectors (`→`), select dots (`○`/`●`), info/warn
@@ -235,7 +235,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
 
 ### Rendering contract with the porcelain layer
 
-- Porcelain commands (Spec 0003) remain the source of *what*: they hand this layer plain data (entity
+- Porcelain commands (Spec 0003) remain the source of _what_: they hand this layer plain data (entity
   lists, parsed-recurrence strings, choice sets) and receive back plain values (selected array, boolean,
   entered text). This layer performs no command logic, no parsing, no kv_store, no git — it only draws and
   collects. This keeps the CLI seam (Spec 0003) testable without a terminal and this layer testable via
@@ -252,7 +252,7 @@ Actors: **user** (interacting at the terminal), **new user** (first-run `install
 ### Deferred / consumed elsewhere
 
 - The `nerdfont` and date-format **values** and the persisted custom-theme JSON live in `config.md` and
-  are read/written by Spec 0003; this layer only *reads* them to pick glyphs/format and *returns* the
+  are read/written by Spec 0003; this layer only _reads_ them to pick glyphs/format and _returns_ the
   values a form collects.
 - Board color as an ANSI-16 name (selection UI) is drawn here; the write is Spec 0003.
 
@@ -299,7 +299,7 @@ don't depend on a real `config.md`.
 
 ## Out of Scope
 
-- All command *behavior*, parsing, `kv_store`, filtering, and wiring — Spec 0003 (this layer only draws
+- All command _behavior_, parsing, `kv_store`, filtering, and wiring — Spec 0003 (this layer only draws
   the data those commands produce and returns collected input).
 - Git orchestration (Spec 0002) and mdwal/LWW (Spec 0001).
 - Distribution/auto-update mechanics and the migration runner — Spec 0005 (this layer draws their
