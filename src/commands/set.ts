@@ -1,20 +1,10 @@
 import { defineCommand } from "@bunli/core";
 
-import { INBOX, type Mdwal } from "../mdwal";
+import { INBOX } from "../mdwal";
 import type { TaskOutcome } from "../task-message";
 import { withDtstart } from "../recurrence";
-import {
-  boardRepository,
-  datedOutcome,
-  openWorkspace,
-  parseDate,
-  reportTask,
-  resolveBoard,
-  resolveTask,
-  taskRepository,
-  type TaskRepository,
-} from "../porcelain";
-import type { Task } from "../schema";
+import { onTask, type TaskContext } from "../entity-action";
+import { boardRepository, datedOutcome, parseDate, resolveBoard } from "../porcelain";
 import { workspaceOption } from "../command-options";
 import { rejectUnknownSubcommand, subcommands } from "../hybrid-command";
 
@@ -23,29 +13,18 @@ import { rejectUnknownSubcommand, subcommands } from "../hybrid-command";
 // the router (and listed in help) instead of by a hand-rolled check.
 
 /**
- * Resolve `<id>` to its task and hand the field's body the value the user typed.
- * The whole tail is the value, so a multi-word title needs no quoting.
+ * Hand the field's body the value the user typed. The whole tail is the value,
+ * so a multi-word title needs no quoting.
  */
 async function editTask(
   positional: string[],
   workspace: string | undefined,
-  edit: (
-    task: Task,
-    value: string,
-    context: { tasks: TaskRepository; mdwal: Mdwal; root: string },
-  ) => Promise<TaskOutcome>,
+  edit: (value: string, context: TaskContext) => Promise<TaskOutcome>,
 ): Promise<void> {
-  await reportTask("update", async () => {
-    const [reference, ...rest] = positional;
-    const { root, id } = await resolveTask(reference ?? "", workspace);
-    const { mdwal } = await openWorkspace(root);
-    const tasks = taskRepository(mdwal);
-
-    const task = await tasks.findById(id);
-    if (task === null) throw new Error(`no such task: ${reference}`);
-
-    return await edit(task, rest.join(" "), { tasks, mdwal, root });
-  });
+  const [reference, ...rest] = positional;
+  await onTask("update", reference ?? "", workspace, (context) =>
+    edit(rest.join(" "), context),
+  );
 }
 
 const options = { workspace: workspaceOption() };
@@ -65,7 +44,7 @@ export default defineCommand({
       description: "retitle a task",
       options,
       handler: async ({ flags, positional }) => {
-        await editTask(positional, flags.workspace, async (task, value, { tasks }) => {
+        await editTask(positional, flags.workspace, async (value, { task, tasks }) => {
           await tasks.update({ ...task, title: value });
           return { title: value, predicate: "title updated" };
         });
@@ -77,7 +56,7 @@ export default defineCommand({
       description: "set a task's description",
       options,
       handler: async ({ flags, positional }) => {
-        await editTask(positional, flags.workspace, async (task, value, { tasks }) => {
+        await editTask(positional, flags.workspace, async (value, { task, tasks }) => {
           await tasks.update({ ...task, description: value });
           return { title: task.title, predicate: "description updated" };
         });
@@ -93,16 +72,7 @@ export default defineCommand({
         // for a recurring one moves where the series starts, keeping the rule
         // intact. An empty value clears the schedule (rrule → null), leaving an
         // undated task.
-        await reportTask("update", async (config) => {
-          const [reference, ...rest] = positional;
-          const { root, id } = await resolveTask(reference ?? "", flags.workspace);
-          const { mdwal } = await openWorkspace(root);
-          const tasks = taskRepository(mdwal);
-
-          const task = await tasks.findById(id);
-          if (task === null) throw new Error(`no such task: ${reference}`);
-          const value = rest.join(" ");
-
+        await editTask(positional, flags.workspace, async (value, { task, tasks, config }) => {
           if (value === "") {
             await tasks.update({ ...task, rrule: null });
             return { title: task.title, predicate: "schedule removed" };
@@ -123,7 +93,7 @@ export default defineCommand({
         // Move a task between boards (mehorias item 4). The board is named by
         // name/number/inbox; an empty value moves it back to the inbox — the
         // "no board" state — mirroring how an empty date-time clears the schedule.
-        await editTask(positional, flags.workspace, async (task, value, { tasks, mdwal, root }) => {
+        await editTask(positional, flags.workspace, async (value, { task, tasks, mdwal, root }) => {
           const boards = boardRepository(mdwal);
           const boardId = value === "" ? INBOX : await resolveBoard(boards, root, value);
           await tasks.update({ ...task, board: boardId });

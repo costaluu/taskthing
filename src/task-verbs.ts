@@ -1,11 +1,6 @@
 import { nextOccurrence } from "./recurrence";
-import {
-  datedOutcome,
-  openWorkspace,
-  reportTask,
-  resolveTask,
-  taskRepository,
-} from "./porcelain";
+import { onTask } from "./entity-action";
+import { datedOutcome } from "./porcelain";
 
 // The task verbs that come in pairs: complete/reopen, star/unstar, delete/recover
 // are each one operation with opposite values, so the pair shares a body and the
@@ -16,14 +11,7 @@ export async function completeTask(
   value: boolean,
   workspace?: string,
 ): Promise<void> {
-  await reportTask(value ? "complete" : "reopen", async (config) => {
-    const { root, id } = await resolveTask(reference, workspace);
-    const { mdwal } = await openWorkspace(root);
-    const tasks = taskRepository(mdwal);
-
-    const task = await tasks.findById(id);
-    if (task === null) throw new Error(`no such task: ${reference}`);
-
+  await onTask(value ? "complete" : "reopen", reference, workspace, async ({ task, tasks, config }) => {
     await tasks.update({ ...task, completed: value });
 
     // Only completing mints: reopening a task by mistake must not create an
@@ -50,14 +38,7 @@ export async function starTask(
   value: boolean,
   workspace?: string,
 ): Promise<void> {
-  await reportTask(value ? "star" : "unstar", async () => {
-    const { root, id } = await resolveTask(reference, workspace);
-    const { mdwal } = await openWorkspace(root);
-    const tasks = taskRepository(mdwal);
-
-    const task = await tasks.findById(id);
-    if (task === null) throw new Error(`no such task: ${reference}`);
-
+  await onTask(value ? "star" : "unstar", reference, workspace, async ({ task, tasks }) => {
     await tasks.update({ ...task, star: value });
     return { title: task.title, predicate: value ? "starred" : "unstarred" };
   });
@@ -69,17 +50,10 @@ export async function setTaskDeleted(
   value: boolean,
   workspace?: string,
 ): Promise<void> {
-  await reportTask(value ? "delete" : "recover", async () => {
-    const { root, id } = await resolveTask(reference, workspace);
-    const { mdwal } = await openWorkspace(root);
-    const tasks = taskRepository(mdwal);
-
-    // Read the task first so its title is available for the outcome line — the
-    // soft-delete/recover itself only reports whether the task existed.
-    const task = await tasks.findById(id);
-    if (task === null) throw new Error(`no such task: ${reference}`);
-
-    const done = value ? await tasks.delete(id) : await tasks.recover(id);
+  await onTask(value ? "delete" : "recover", reference, workspace, async ({ task, tasks }) => {
+    // The task was read for its title before this ran; the soft-delete itself
+    // only reports whether it was still there to act on.
+    const done = value ? await tasks.delete(task.id) : await tasks.recover(task.id);
     if (!done) throw new Error(`no such task: ${reference}`);
     return { title: task.title, predicate: value ? "deleted" : "recovered" };
   });

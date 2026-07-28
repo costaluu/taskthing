@@ -543,6 +543,44 @@ test("a listed number resolves to its entity in a later command", async () => {
   }
 });
 
+test("every task verb refuses an unknown reference the same way", async () => {
+  const home = await dataHome();
+  try {
+    await taskthing(home, "add", "walk the dog");
+
+    // The reference rules live in one place now, so every verb that names a task
+    // is held to them identically — no verb gets to be quietly more forgiving.
+    const verbs: string[][] = [
+      ["check", "9"],
+      ["uncheck", "9"],
+      ["star", "9"],
+      ["unstar", "9"],
+      ["delete", "9"],
+      ["recover", "9"],
+      ["clear", "9"],
+      ["set title", "9", "new title"],
+      ["set description", "9", "notes"],
+      ["set date-time", "9", "tomorrow"],
+      ["set board", "9", "work"],
+    ];
+
+    for (const [path, ...args] of verbs) {
+      const run = await taskthing(home, path!, ...args);
+      expect(run.exitCode).toBe(1);
+      expect(run.stderr).toMatch(/list/i);
+    }
+
+    // ...and none of them touched the task that does exist.
+    const tasks = await workspaceMdwal(home).readAll("task");
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]!.title).toBe("walk the dog");
+    expect(tasks[0]!.completed).toBe(false);
+    expect(tasks[0]!.deleted).toBe(false);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
 test("a number nobody listed is an error, not a guess", async () => {
   const home = await dataHome();
   try {

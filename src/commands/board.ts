@@ -4,12 +4,12 @@ import { z } from "zod";
 import type { BoardRow } from "../board-list";
 import { INBOX } from "../mdwal";
 import { createKvStore } from "../kv-store";
+import { onBoard } from "../entity-action";
 import {
   boardRepository,
   openWorkspace,
   readConfig,
   reportBoard,
-  resolveBoard,
   targetWorkspace,
   taskRepository,
 } from "../porcelain";
@@ -59,17 +59,9 @@ function setBoardField(
     description: action,
     options,
     handler: async ({ flags, positional }) => {
-      await reportBoard(action, async () => {
-        const [reference, ...rest] = positional;
+      const [reference, ...rest] = positional;
 
-        const root = await targetWorkspace(flags.workspace);
-        const { mdwal } = await openWorkspace(root);
-        const boards = boardRepository(mdwal);
-
-        const id = await resolveBoard(boards, root, reference ?? "");
-        const board = await boards.findById(id);
-        if (board === null) throw new Error(`no such board: ${reference}`);
-
+      await onBoard(action, reference ?? "", flags.workspace, async ({ board, boards }) => {
         const next = rest.join(" ");
         await boards.update({ ...board, [field]: next });
 
@@ -143,33 +135,30 @@ export default defineCommand({
       description: "soft-delete a board, moving its tasks to the inbox",
       options,
       handler: async ({ flags, positional }) => {
-        const reference = positional[0] ?? "";
-        await reportBoard("delete this board", async () => {
-          const root = await targetWorkspace(flags.workspace);
-          const { mdwal } = await openWorkspace(root);
-          const boards = boardRepository(mdwal);
-          const tasks = taskRepository(mdwal);
+        await onBoard(
+          "delete this board",
+          positional[0] ?? "",
+          flags.workspace,
+          async ({ board, boards, mdwal }) => {
+            const tasks = taskRepository(mdwal);
 
-          const id = await resolveBoard(boards, root, reference);
-          const board = await boards.findById(id);
-          if (board === null) throw new Error(`no such board: ${reference}`);
+            // A task may never point at a board that is gone, so each one falls back to
+            // the virtual board — one field event apiece, so the move converges under LWW
+            // like any other edit. Recovering the board later brings back the board, not
+            // these tasks: they now genuinely belong to the inbox.
+            const orphaned = await tasks.filter((task) => task.board === board.id);
+            for (const task of orphaned) {
+              await tasks.update({ ...task, board: INBOX });
+            }
 
-          // A task may never point at a board that is gone, so each one falls back to
-          // the virtual board — one field event apiece, so the move converges under LWW
-          // like any other edit. Recovering the board later brings back the board, not
-          // these tasks: they now genuinely belong to the inbox.
-          const orphaned = await tasks.filter((task) => task.board === id);
-          for (const task of orphaned) {
-            await tasks.update({ ...task, board: INBOX });
-          }
-
-          await boards.delete(id);
-          // The note is shown only when tasks actually moved, so a board with none
-          // reads simply as "deleted".
-          return orphaned.length > 0
-            ? { name: board.name, predicate: "deleted", suffix: ". its tasks were moved to inbox" }
-            : { name: board.name, predicate: "deleted" };
-        });
+            await boards.delete(board.id);
+            // The note is shown only when tasks actually moved, so a board with none
+            // reads simply as "deleted".
+            return orphaned.length > 0
+              ? { name: board.name, predicate: "deleted", suffix: ". its tasks were moved to inbox" }
+              : { name: board.name, predicate: "deleted" };
+          },
+        );
       },
     }),
 
@@ -179,15 +168,8 @@ export default defineCommand({
       options,
       handler: async ({ flags, positional }) => {
         const reference = positional[0] ?? "";
-        await reportBoard("recover this board", async () => {
-          const root = await targetWorkspace(flags.workspace);
-          const { mdwal } = await openWorkspace(root);
-          const boards = boardRepository(mdwal);
-
-          const id = await resolveBoard(boards, root, reference);
-          const board = await boards.findById(id);
-          if (board === null) throw new Error(`no such board: ${reference}`);
-          if (!(await boards.recover(id))) throw new Error(`no such board: ${reference}`);
+        await onBoard("recover this board", reference, flags.workspace, async ({ board, boards }) => {
+          if (!(await boards.recover(board.id))) throw new Error(`no such board: ${reference}`);
           return { name: board.name, predicate: "recovered" };
         });
       },

@@ -1,11 +1,6 @@
 import { defineCommand } from "@bunli/core";
 
-import {
-  openWorkspace,
-  reportTask,
-  resolveTask,
-  taskRepository,
-} from "../porcelain";
+import { onTask } from "../entity-action";
 import { workspaceOption } from "../command-options";
 
 export default defineCommand({
@@ -22,18 +17,12 @@ export default defineCommand({
   handler: async ({ flags, positional }) => {
     const reference = positional[0] ?? "";
 
-    await reportTask("permanently delete", async () => {
-      const { root, id } = await resolveTask(reference, flags.workspace);
-      const { mdwal } = await openWorkspace(root);
-      const tasks = taskRepository(mdwal);
-
-      const task = await tasks.findById(id);
-      if (task === null) throw new Error(`no such task: ${reference}`);
+    await onTask("permanently delete", reference, flags.workspace, async ({ task, mdwal }) => {
       if (!task.deleted) {
         throw new Error(`task ${reference} is not deleted — \`delete\` it first`);
       }
 
-      await mdwal.discard("task", id);
+      await mdwal.discard("task", task.id);
       return { title: task.title, predicate: "permanently deleted" };
     });
   },

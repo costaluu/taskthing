@@ -2,9 +2,6 @@ import { createCLI } from "@bunli/core";
 
 import { VERSION } from "./build";
 
-import { plainPresenter } from "./presenter-plain";
-import { setPresenter } from "./presenter";
-
 import add from "./commands/add";
 import board from "./commands/board";
 import boards from "./commands/boards";
