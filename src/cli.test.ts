@@ -48,6 +48,15 @@ async function taskthing(home: string, path: string, ...args: string[]): Promise
   const recorder = recordingPresenter();
   setPresenter(recorder);
 
+  // A spawned run always had a pipe for stdout; an in-process one inherits the
+  // test runner's, which is a terminal when the suite is run by hand. Four
+  // commands still ask `isTTY` for themselves (install, config, theme, update
+  // apply) and would block on an interactive form, and ink would write escape
+  // sequences into the output under assertion. So the run is made to look piped,
+  // which is what it is meant to be.
+  const tty = process.stdout.isTTY;
+  process.stdout.isTTY = false;
+
   // A few lines are deliberately plain in both modes (install's closing line,
   // the config listing, the entity plumber's log) and so never reach the
   // presenter. They are spliced into the same sequence so a test reads one
@@ -81,6 +90,7 @@ async function taskthing(home: string, path: string, ...args: string[]): Promise
     console.log = log;
     console.error = error;
     process.stdout.write = write;
+    process.stdout.isTTY = tty;
   }
 }
 
