@@ -1,0 +1,3 @@
+# LWW usa timestamp simples (ns), sem HLC/CRDT
+
+O mdwal precisa decidir, sem coordenação central, qual de duas edições concorrentes "vence" (política Last Write Wins). Consideramos usar um Hybrid Logical Clock para lidar com skew de relógio entre máquinas, mas descartamos: os logs mdwal de diferentes peers são mergeados e compactados em um estado consistente (não são replayed como histórico causal imutável), então não há causalidade a preservar entre merges — só resta comparar "qual timestamp é maior". Decidimos usar o timestamp de nanosegundos do próprio evento como critério de LWW; em caso de empate exato (considerado praticamente improvável dado a precisão de nanosegundos), a escolha é arbitrária.
