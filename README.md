@@ -40,7 +40,7 @@ taskthing add "standup r:[every weekday]"     # a recurring task
 taskthing list                                # numbered list of open tasks
 taskthing check 1                             # complete task #1
 taskthing star 2                              # star task #2
-taskthing add --board "Work"                  # create a board
+taskthing board add "Work"                    # create a board
 taskthing boards                              # list boards
 ```
 
@@ -84,9 +84,10 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | `star <id>` / `unstar <id>`    | Toggle a task's star                                                           |
 | `delete <id>` / `recover <id>` | Soft-delete / restore a task                                                   |
 | `clear <id>`                   | Permanently remove an _already soft-deleted_ task from this machine            |
-| `set title <id>`               | Edit the title (interactive)                                                   |
-| `set description <id>`         | Edit the description (interactive)                                             |
-| `set date-time <id>`           | Rewrite the date/recurrence (interactive, confirmed)                           |
+| `set title <id> <value>`       | Retitle a task                                                                 |
+| `set description <id> <value>` | Set a task's description                                                       |
+| `set date-time <id> <value>`   | Rewrite the schedule (an empty value clears it)                                |
+| `set board <id> <ref>`         | Move a task to a board by name, number or `inbox`                              |
 
 **`list` filters:** `--checked` (include completed), `--starred`, `--deleted`, `--hasDescription`, `--period=<Nd|Nm|Ny>` (within a window from now), `--in-board=<name>,…` (or `--in-board=inbox`).
 
@@ -94,18 +95,18 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 
 | Command                                        | What it does                                                 |
 | ---------------------------------------------- | ------------------------------------------------------------ |
-| `add --board "<name>"`                         | Create a board                                               |
-| `boards` (alias for `list --board`)            | List boards, numbered                                        |
-| `set --board name <id> <new-name>`             | Rename a board                                               |
-| `set --board icon <id> <icon>`                 | Set a board's icon                                           |
-| `set --board color <id> <ansi-color>`          | Set a board's colour (ANSI 16)                               |
-| `delete --board <id>` / `recover --board <id>` | Soft-delete / restore a board (its tasks fall back to inbox) |
+| `board add "<name>" [--icon=<glyph>]`          | Create a board                                               |
+| `board list` (or the `boards` shortcut)        | List boards, numbered                                        |
+| `board set name <id> <new-name>`               | Rename a board                                               |
+| `board set icon <id> <icon>`                   | Set a board's icon                                           |
+| `board set color <id> <ansi-color>`            | Set a board's colour (ANSI 16)                               |
+| `board delete <id>` / `board recover <id>`     | Soft-delete / restore a board (its tasks fall back to inbox) |
 
 ### Workspaces
 
 | Command                                   | What it does                                                              |
 | ----------------------------------------- | ------------------------------------------------------------------------- |
-| `workspace list`                          | List your workspaces                                                      |
+| `workspace list` (or the `workspaces` shortcut) | List your workspaces                                                |
 | `use <name>` (alias for `workspace use`)  | Switch the current workspace                                              |
 | `workspace create\|rename\|delete <name>` | Manage workspaces (`delete` is confirmed and can't remove the active one) |
 | `workspace remote add <url>`              | Associate a git remote (makes the workspace remote)                       |
@@ -173,8 +174,9 @@ taskthing is written in TypeScript and built with **[Bun](https://bun.com)**.
 ```sh
 bun install
 bun test                                             # run the test suite
-bun src/cli.ts <command>                             # run without compiling
-bun build src/cli.ts --compile --outfile taskthing   # produce a standalone binary
+bun src/index.ts <command>                           # run without compiling
+bun run scripts/build.ts                             # compile a binary for this machine
+bun run scripts/build.ts all                         # compile every released target
 ```
 
 Release binaries are cut by CI on a semver tag (`git tag v1.2.3 && git push --tags`) — one per OS/arch, attached to the GitHub release, which is what `update` and the installers download.

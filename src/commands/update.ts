@@ -1,0 +1,97 @@
+import { defineCommand, option } from "@bunli/core";
+import { z } from "zod";
+
+import { subcommands } from "../hybrid-command";
+import { buildUpdater, readConfig } from "../porcelain";
+import { spinnerMessages } from "../spinner-messages";
+import { renderSpinner, runConfirmation } from "../tui";
+
+// The check/apply pair share their shape: run the work behind a spinner on a
+// TTY, print the same copy plainly when piped so a script sees the outcome and,
+// on failure, why.
+async function spin(
+  pending: string,
+  failure: (error: unknown) => string,
+  run: () => Promise<string>,
+): Promise<void> {
+  const config = await readConfig();
+  if (process.stdout.isTTY) {
+    const ok = await renderSpinner(pending, run, config);
+    if (!ok) process.exit(1);
+    return;
+  }
+  try {
+    console.log(await run());
+  } catch (error) {
+    console.error(failure(error));
+    process.exit(1);
+  }
+}
+
+const forceOption = option(z.coerce.boolean().default(false), {
+  description: "check even if the cached answer is still fresh",
+  argumentKind: "flag",
+});
+
+/** Is a newer release available? The bare `update` asks this too. */
+async function check(force: boolean): Promise<void> {
+  // The three outcomes (latest / pending <cur> → <target> / error) use
+  // CONTEXT's copy; the success line is chosen from the result, so it goes
+  // through the plain Spinner rather than the fixed-copy command spinner.
+  const updater = buildUpdater();
+  await spin(spinnerMessages.updateCheck.pending, spinnerMessages.updateCheck.failure, async () => {
+    const result = await updater.check({ force });
+    return result.status === "latest"
+      ? spinnerMessages.updateCheck.latest
+      : spinnerMessages.updateCheck.update(result.current, result.target);
+  });
+}
+
+export default defineCommand({
+  name: "update" as const,
+  description: "self-update from GitHub",
+  options: { force: forceOption },
+  handler: async ({ flags }) => {
+    await check(flags.force);
+  },
+  commands: subcommands([
+    defineCommand({
+      name: "check" as const,
+      description: "report whether a newer release is available",
+      options: { force: forceOption },
+      handler: async ({ flags }) => {
+        await check(flags.force);
+      },
+    }),
+
+    defineCommand({
+      name: "apply" as const,
+      description: "download and swap in the newest release",
+      handler: async () => {
+        const config = await readConfig();
+        const updater = buildUpdater();
+
+        const confirm = async () => {
+          if (config.autoUpdate === "silent") return true;
+          if (!process.stdout.isTTY) {
+            throw new Error(
+              "update apply needs a terminal to confirm, or set `autoUpdate: silent`",
+            );
+          }
+          return await runConfirmation("Update", "update taskthing now?", config);
+        };
+
+        await spin(
+          spinnerMessages.updateApply.pending,
+          spinnerMessages.updateApply.failure,
+          async () => {
+            const result = await updater.apply({ confirm });
+            if (result.status === "up-to-date") return spinnerMessages.updateCheck.latest;
+            if (result.status === "declined") return "update cancelled";
+            return spinnerMessages.updateApply.success(result.target);
+          },
+        );
+      },
+    }),
+  ]),
+});

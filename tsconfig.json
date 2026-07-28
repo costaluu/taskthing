@@ -26,5 +26,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+
+  // Bunli regenerates this on every `bunli dev`/`build`; it must be in the
+  // program for the generated command types to resolve.
+  "include": ["src", "scripts", "bunli.config.ts", ".bunli/commands.gen.ts"]
 }

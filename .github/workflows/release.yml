@@ -25,7 +25,12 @@ jobs:
           bun-version: "1.3.13"
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        # Every OS/arch is cross-compiled from this one runner, and bunli's
+        # standalone compilation needs each target's OpenTUI runtime package
+        # present — hence the wildcard install rather than a plain one.
+        run: |
+          bun install --frozen-lockfile
+          bun install --os '*' --cpu '*'
 
       - name: Stamp the release version into the binary
         # The tag is the source of truth for the version; the updater compares it
@@ -37,17 +42,11 @@ jobs:
           grep 'export const VERSION' src/build.ts
 
       - name: Compile one binary per OS/arch
-        # Asset name = taskthing-<process.platform>-<process.arch>, which is what
-        # the updater's selectAsset matches (note: Windows is `win32`, though the
-        # Bun target is `windows`).
-        run: |
-          mkdir -p dist
-          build() { bun build src/cli.ts --compile --target="$2" --outfile "dist/$1"; }
-          build taskthing-linux-x64      bun-linux-x64
-          build taskthing-linux-arm64    bun-linux-arm64
-          build taskthing-darwin-x64     bun-darwin-x64
-          build taskthing-darwin-arm64   bun-darwin-arm64
-          build taskthing-win32-x64.exe  bun-windows-x64
+        # `bunli build` compiles every target; scripts/build.ts renames its output
+        # to taskthing-<process.platform>-<process.arch>, which is what the
+        # updater's selectAsset matches (note: Windows is `win32`, though the
+        # bunli target is `windows`).
+        run: bun run scripts/build.ts all
 
       - name: Publish the release with its assets
         env:

@@ -12,7 +12,7 @@ import { boardSchema, taskSchema } from "./schema";
 // real process against a temporary data home, then assert on the workspace files
 // it produced, on the kv_store, and on the command's plain output and exit code.
 // Styling and layout are drawn a layer above and are not asserted here.
-const ENTRYPOINT = join(import.meta.dir, "cli.ts");
+const ENTRYPOINT = join(import.meta.dir, "index.ts");
 
 interface Run {
   exitCode: number;
@@ -331,44 +331,53 @@ test("entity without --log refuses, since it only exists to author a migration l
   }
 });
 
-test("help lists the command surface and exits cleanly", async () => {
-  const home = await dataHome();
-  try {
-    const run = await taskthing(home, "help");
-    expect(run.exitCode).toBe(0);
-    // A usage header and a sample from each layer of the command surface.
-    expect(run.stdout).toMatch(/usage/i);
-    for (const cmd of ["add", "list", "sync", "config", "update", "workspace"]) {
-      expect(run.stdout).toContain(cmd);
-    }
-  } finally {
-    await rm(home, { recursive: true, force: true });
-  }
-});
+// Help and routing errors are the framework's to render, not this CLI's. Piped —
+// which is how these tests run, and how an agent or a script reads the CLI — that
+// rendering is a structured envelope rather than prose; on a terminal it is the
+// familiar text. The assertions below are on the envelope's shape and payload,
+// the part a consumer actually depends on.
 
-test("no command, and --help/-h, all show help and exit cleanly", async () => {
+/** The `{ ok, data }` / `{ ok, error }` envelope a piped run prints. */
+function envelope(text: string): { ok: boolean; data?: any; error?: any } {
+  return JSON.parse(text);
+}
+
+test("`help`, no command, and --help/-h all show the command surface and exit cleanly", async () => {
   const home = await dataHome();
   try {
-    for (const args of [[] as string[], ["--help"], ["-h"]]) {
+    for (const args of [["help"], [] as string[], ["--help"], ["-h"]]) {
       const run = await taskthing(home, ...args);
       expect(run.exitCode).toBe(0);
-      expect(run.stdout).toMatch(/usage/i);
-      expect(run.stdout).toContain("add");
+
+      const { ok, data } = envelope(run.stdout);
+      expect(ok).toBe(true);
+      expect(data.type).toBe("help");
+      expect(data.cliName).toBe("taskthing");
+
+      // A sample from each layer of the command surface.
+      for (const cmd of ["add", "list", "board", "sync", "config", "update", "workspace"]) {
+        expect(data.text).toContain(cmd);
+      }
     }
   } finally {
     await rm(home, { recursive: true, force: true });
   }
 });
 
-test("an unknown command names itself and shows help, but still fails", async () => {
+test("an unknown command names itself and lists the real ones, but still fails", async () => {
   const home = await dataHome();
   try {
     const run = await taskthing(home, "frobnicate");
     // Still a non-zero exit so scripts detect the mistake...
     expect(run.exitCode).toBe(1);
-    expect(run.stderr).toMatch(/unknown command: frobnicate/);
-    // ...but the help is printed to guide the user to the real commands.
-    expect(run.stdout).toMatch(/usage/i);
+
+    const { ok, error } = envelope(run.stderr);
+    expect(ok).toBe(false);
+    expect(error.kind).toBe("command-not-found");
+    expect(error.command).toBe("frobnicate");
+    // ...and the real commands come back with it, to guide the user.
+    expect(error.available).toContain("add");
+    expect(error.available).toContain("board");
   } finally {
     await rm(home, { recursive: true, force: true });
   }
@@ -624,10 +633,10 @@ test("--global lists every workspace, and its numbers still act on the right one
   }
 });
 
-test("add --board creates a board, the porcelain flag choosing the entity", async () => {
+test("board add creates a board, the entity naming its own verb tree", async () => {
   const home = await dataHome();
   try {
-    const run = await taskthing(home, "add", "--board", "work");
+    const run = await taskthing(home, "board", "add", "work");
     expect(run.exitCode).toBe(0);
 
     const boards = await workspaceMdwal(home).readAll("board");
@@ -647,15 +656,15 @@ test("add --board creates a board, the porcelain flag choosing the entity", asyn
   }
 });
 
-test("list --board numbers boards in a store of their own", async () => {
+test("board list numbers boards in a store of their own", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "add", "--board", "work");
-    await taskthing(home, "add", "--board", "home");
+    await taskthing(home, "board", "add", "work");
+    await taskthing(home, "board", "add", "home");
     await taskthing(home, "add", "a task");
     await taskthing(home, "list");
 
-    const run = await taskthing(home, "list", "--board");
+    const run = await taskthing(home, "board", "list");
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toContain("work");
     expect(run.stdout).toContain("home");
@@ -676,15 +685,15 @@ test("list --board numbers boards in a store of their own", async () => {
   }
 });
 
-test("set --board renames a board and gives it an icon and a colour", async () => {
+test("board set renames a board and gives it an icon and a colour", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "add", "--board", "wrok");
-    await taskthing(home, "list", "--board");
+    await taskthing(home, "board", "add", "wrok");
+    await taskthing(home, "board", "list");
 
-    expect((await taskthing(home, "set", "--board", "name", "1", "work")).exitCode).toBe(0);
-    expect((await taskthing(home, "set", "--board", "icon", "1", "💼")).exitCode).toBe(0);
-    expect((await taskthing(home, "set", "--board", "color", "1", "blue")).exitCode).toBe(0);
+    expect((await taskthing(home, "board", "set", "name", "1", "work")).exitCode).toBe(0);
+    expect((await taskthing(home, "board", "set", "icon", "1", "💼")).exitCode).toBe(0);
+    expect((await taskthing(home, "board", "set", "color", "1", "blue")).exitCode).toBe(0);
 
     const board = (await workspaceMdwal(home).readAll("board"))[0]!;
     expect(board.name).toBe("work");
@@ -693,7 +702,7 @@ test("set --board renames a board and gives it an icon and a colour", async () =
 
     // A field the board doesn't have is a mistake worth reporting, not a new
     // field invented on the spot.
-    const bad = await taskthing(home, "set", "--board", "size", "1", "large");
+    const bad = await taskthing(home, "board", "set", "size", "1", "large");
     expect(bad.exitCode).toBe(1);
   } finally {
     await rm(home, { recursive: true, force: true });
@@ -703,15 +712,15 @@ test("set --board renames a board and gives it an icon and a colour", async () =
 test("deleting a board sends its tasks to the inbox, and recovering it does not take them back", async () => {
   const home = await dataHome();
   try {
-    await taskthing(home, "add", "--board", "work");
-    await taskthing(home, "list", "--board");
+    await taskthing(home, "board", "add", "work");
+    await taskthing(home, "board", "list");
     const boardId = (await kvStore(home, "boards"))["1"]!;
 
     await seedTask(home, { title: "at work", board: boardId });
     await seedTask(home, { title: "at work too", board: boardId });
     await seedTask(home, { title: "unfiled" });
 
-    expect((await taskthing(home, "delete", "--board", "1")).exitCode).toBe(0);
+    expect((await taskthing(home, "board", "delete", "1")).exitCode).toBe(0);
 
     // A task can never be left pointing at a board that is gone, so every task
     // of that board falls back to the virtual one.
@@ -725,7 +734,7 @@ test("deleting a board sends its tasks to the inbox, and recovering it does not 
 
     // Recovering the board brings the board back, not its former tasks: each
     // task now genuinely belongs to the inbox, and only the user can move it.
-    expect((await taskthing(home, "recover", "--board", boardId)).exitCode).toBe(0);
+    expect((await taskthing(home, "board", "recover", boardId)).exitCode).toBe(0);
     expect((await workspaceMdwal(home).read("board", boardId)).deleted).toBe(false);
 
     const after = await workspaceMdwal(home).readAll("task");
@@ -977,7 +986,7 @@ test("--workspace points a command at another workspace, leaving the current one
     expect(there.description).toBe("under the sink");
 
     // Boards are workspace-scoped in the same way.
-    await taskthing(home, "add", "--board", "plumbing", "--workspace=home");
+    await taskthing(home, "board", "add", "plumbing", "--workspace=home");
     expect(await workspaceMdwal(home, "home").readAll("board")).toHaveLength(1);
     expect(await workspaceMdwal(home).readAll("board")).toHaveLength(0);
   } finally {
