@@ -334,3 +334,21 @@ test("apply reports up-to-date without downloading when already current", async 
   expect(calls.downloaded).toEqual([]);
   expect(calls.swapped).toBe(0);
 });
+
+test("apply sweeps a stale binary left by a prior swap even when already up to date", async () => {
+  // Windows can't overwrite the running exe in place, so a swap renames the old
+  // one aside; this stray file is swept on every apply call, not only ones that
+  // end up applying something (ADR-0008).
+  const { deps, calls } = applyHarness("silent");
+  deps.currentVersion = "2.0.0"; // same as the release, so apply won't swap
+  let swept = 0;
+  deps.fs!.cleanupStale = async () => {
+    swept += 1;
+  };
+  const updater = createUpdater(deps);
+
+  await updater.apply({ confirm: async () => true });
+
+  expect(swept).toBe(1);
+  expect(calls.swapped).toBe(0);
+});

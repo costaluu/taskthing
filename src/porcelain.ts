@@ -566,6 +566,15 @@ export function buildUpdater() {
       },
     },
     fs: {
+      // Windows locks a running exe against being overwritten (rename onto it
+      // fails EPERM), so swap renames it to `.old` first and moves the new
+      // binary into the freed name (ADR-0008). The `.old` file may still be
+      // locked by this very process right after that, so removing it is
+      // best-effort here and retried on every future apply via cleanupStale.
+      cleanupStale: async () => {
+        if (process.platform !== "win32") return;
+        await rm(`${process.execPath}.old`, { force: true }).catch(() => {});
+      },
       // Download-then-replace: write beside the running binary, then rename over
       // it, so a failure mid-download never leaves a half-written binary.
       swap: async (bytes) => {
@@ -573,7 +582,14 @@ export function buildUpdater() {
         const tmp = `${target}.new`;
         await Bun.write(tmp, bytes);
         await chmod(tmp, 0o755);
-        await rename(tmp, target);
+        if (process.platform === "win32") {
+          await rm(`${target}.old`, { force: true }).catch(() => {});
+          await rename(target, `${target}.old`);
+          await rename(tmp, target);
+          await rm(`${target}.old`, { force: true }).catch(() => {});
+        } else {
+          await rename(tmp, target);
+        }
       },
     },
     runMigrations: runAllMigrations,

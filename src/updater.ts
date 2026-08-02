@@ -52,6 +52,8 @@ export interface Downloader {
 /** Replaces the running binary — download-then-replace, so a failure is safe. */
 export interface BinaryFs {
   swap(bytes: Uint8Array): Promise<void>;
+  /** Best-effort removal of a binary orphaned by a previous swap (ADR-0008). */
+  cleanupStale?(): Promise<void>;
 }
 
 export type CheckResult =
@@ -139,6 +141,10 @@ export function createUpdater(deps: UpdaterDeps): Updater {
   }
 
   async function apply(options: ApplyOptions): Promise<ApplyResult> {
+    // A previous swap may have left its old binary behind (ADR-0008); sweep it
+    // every run, whether or not this run ends up applying a new update.
+    await deps.fs?.cleanupStale?.();
+
     const result = await check();
     if (result.status === "latest") return { status: "up-to-date" };
 
