@@ -26,7 +26,7 @@ export default defineCommand({
     await reportTask("create", async (config) => {
       const root = await targetWorkspace(flags.workspace);
       const { mdwal } = await openWorkspace(root);
-      const { title, rrule, board } = parseAddInput(input, now());
+      const { title, rrule, board } = parseAddInput(input, now(), config.dateFormat);
 
       // A `b:[…]` tag names the board (by name/number/inbox); without one the task
       // falls to the inbox. Resolving here surfaces an unknown board as this

@@ -1,5 +1,6 @@
-import * as chrono from "chrono-node";
 import { RRule } from "rrule";
+
+import { parseNaturalDate } from "./date-parse";
 
 // ── the add string-input parser ─────────────────────────────────────────────
 //
@@ -24,7 +25,11 @@ export interface ParsedAddInput {
   board: string | null;
 }
 
-export function parseAddInput(input: string, now: Date): ParsedAddInput {
+export function parseAddInput(
+  input: string,
+  now: Date,
+  dateFormat: "america" | "europe",
+): ParsedAddInput {
   let rest = input;
   const take = (pattern: RegExp): string | null => {
     const match = rest.match(pattern);
@@ -40,7 +45,7 @@ export function parseAddInput(input: string, now: Date): ParsedAddInput {
   const boardTag = take(TAGS.board);
   const board = boardTag === null || boardTag === "" ? null : boardTag;
 
-  const dtstart = date === null ? null : chrono.parseDate(date, now);
+  const dtstart = date === null ? null : parseNaturalDate(date, now, dateFormat);
   if (date !== null && dtstart === null) {
     throw new Error(`not a date: ${date}`);
   }

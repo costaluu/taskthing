@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { RRule } from "rrule";
-import * as chrono from "chrono-node";
 
 import { resolveGitAuthor } from "./author";
+import { parseNaturalDate } from "./date-parse";
 import { createMonotonicClock } from "./clock";
 import { createGlyphs } from "./glyph";
 import { createGlobalKvStore, createKvStore, type KvStore } from "./kv-store";
@@ -150,8 +150,8 @@ export function now(): Date {
   return pinned === undefined ? new Date() : new Date(pinned);
 }
 
-export function parseDate(input: string): Date {
-  const date = chrono.parseDate(input, now());
+export function parseDate(input: string, dateFormat: Config["dateFormat"]): Date {
+  const date = parseNaturalDate(input, now(), dateFormat);
   if (date === null) throw new Error(`not a date: ${input}`);
   return date;
 }

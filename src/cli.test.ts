@@ -147,7 +147,7 @@ test("add reads a d:[…] tag as the task's date and keeps it out of the title",
 
     // A date with no recurrence: a DTSTART on its own, resolved against now and
     // stored as the RFC 5545 string.
-    expect(task.rrule).toBe("DTSTART:20260723T090000Z");
+    expect(task.rrule).toBe("DTSTART:20260723T000000Z");
   } finally {
     await rm(home, { recursive: true, force: true });
   }
@@ -169,7 +169,7 @@ test("add reads an r:[…] tag as recurrence, with d:[…] fixing where it start
     // Both tags: the given date is the DTSTART the recurrence runs from, and
     // the long spellings work the same as the short ones.
     expect(byTitle.get("water plants")).toBe(
-      "DTSTART:20260725T090000Z\nRRULE:FREQ=DAILY",
+      "DTSTART:20260725T000000Z\nRRULE:FREQ=DAILY",
     );
   } finally {
     await rm(home, { recursive: true, force: true });
@@ -1092,7 +1092,7 @@ test("unstar undoes star, and set writes a task's description and date", async (
     // time, without inventing a parallel date field.
     expect((await taskthing(home, "set date-time", "1", "tomorrow")).exitCode).toBe(0);
     expect((await workspaceMdwal(home).readAll("task"))[0]!.rrule).toBe(
-      "DTSTART:20260723T090000Z",
+      "DTSTART:20260723T000000Z",
     );
 
     // Setting the date of a recurring task moves where the series starts and

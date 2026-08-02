@@ -78,7 +78,7 @@ export default defineCommand({
             return { title: task.title, predicate: "schedule removed" };
           }
 
-          const rrule = withDtstart(task.rrule, parseDate(value));
+          const rrule = withDtstart(task.rrule, parseDate(value, config.dateFormat));
           await tasks.update({ ...task, rrule });
           return datedOutcome(task.title, "schedule updated", rrule, config);
         });
