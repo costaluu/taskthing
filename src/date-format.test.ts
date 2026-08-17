@@ -35,6 +35,58 @@ test("a near open date reads as a relative phrase coloured by lateness", () => {
   });
 });
 
+test("near future (2–7 days) reads as 'in X days'", () => {
+  // NOW is 2026-07-23 (Wednesday)
+  expect(formatTaskDate({ date: new Date("2026-07-25T09:00:00Z"), now: NOW })).toEqual({
+    text: "in 2 days",
+    role: "text-secondary",
+  });
+
+  expect(formatTaskDate({ date: new Date("2026-07-30T09:00:00Z"), now: NOW })).toEqual({
+    text: "in 7 days",
+    role: "text-secondary",
+  });
+});
+
+test("next calendar week (ISO Mon–Sun) reads as 'next week'", () => {
+  // NOW is 2026-07-23 (Wednesday). Current week: Mon 20 – Sun 26.
+  // Next week: Mon 27 – Sun Aug 2.
+  // days 2–7 are caught by "in X days", so "next week" fires for days 8+.
+
+  // Thu Jul 30 is in 7 days → "in 7 days", not "next week"
+  expect(formatTaskDate({ date: new Date("2026-07-30T09:00:00Z"), now: NOW })).toEqual({
+    text: "in 7 days",
+    role: "text-secondary",
+  });
+
+  // Mon Jul 27 is in 4 days → "in 4 days" (next week but ≤7 days)
+  expect(formatTaskDate({ date: new Date("2026-07-27T09:00:00Z"), now: NOW })).toEqual({
+    text: "in 4 days",
+    role: "text-secondary",
+  });
+
+  // Test with a NOW where next week falls beyond 7 days.
+  // NOW = Mon 2026-07-20. Next week: Mon 27 – Sun Aug 2.
+  // Wed Jul 29 is in 9 days → "next week"
+  const monday = new Date("2026-07-20T12:00:00Z");
+  expect(formatTaskDate({ date: new Date("2026-07-29T09:00:00Z"), now: monday })).toEqual({
+    text: "next week",
+    role: "text-secondary",
+  });
+
+  // Sun Aug 2 is in 13 days, still next week
+  expect(formatTaskDate({ date: new Date("2026-08-02T09:00:00Z"), now: monday })).toEqual({
+    text: "next week",
+    role: "text-secondary",
+  });
+
+  // Mon Aug 3 is the week after next → absolute
+  expect(formatTaskDate({ date: new Date("2026-08-03T09:00:00Z"), now: monday })).toEqual({
+    text: "3 aug",
+    role: "text-secondary",
+  });
+});
+
 test("a farther open date reads as an absolute, low-importance phrase", () => {
   // Beyond tomorrow the future is absolute, for planning (story 20), all in a
   // low-importance secondary colour (story 19).

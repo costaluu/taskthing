@@ -91,7 +91,20 @@ export function formatTaskDate({
   if (days === -1) return { text: "yesterday", role: "date-yesterday" };
   if (days <= -2) return { text: `${-days} days ago`, role: "date-overdue" };
 
-  // Future (days >= 2): absolute, for planning, always low-importance secondary.
+  // Near future (2–7 days): relative, e.g. "in 3 days".
+  if (days >= 2 && days <= 7) return { text: `in ${days} days`, role: "text-secondary" };
+
+  // Next calendar week (ISO Mon–Sun), for dates beyond 7 days.
+  const nowDay = now.getUTCDay();
+  const daysToNextMon = nowDay === 0 ? 1 : 8 - nowDay;
+  const nextWeekStart = utcMidnight(now) + daysToNextMon * MS_PER_DAY;
+  const nextWeekEnd = nextWeekStart + 7 * MS_PER_DAY;
+  const dateMid = utcMidnight(date);
+  if (dateMid >= nextWeekStart && dateMid < nextWeekEnd) {
+    return { text: "next week", role: "text-secondary" };
+  }
+
+  // Further future: absolute, for planning.
   const month = MONTHS[date.getUTCMonth()];
   if (date.getUTCFullYear() === now.getUTCFullYear()) {
     // Later this year: day + month.

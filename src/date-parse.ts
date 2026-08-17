@@ -15,13 +15,17 @@ import * as chrono from "chrono-node";
 //   moment `add` happened to run), which is a meaningless hour to store on a
 //   task the user only ever gave a date. When no time was named, this pins
 //   the task to that calendar date at UTC midnight instead.
+const PAST_INTENT = /\b(last|yesterday|ago|previous)\b/i;
+
 export function parseNaturalDate(
   input: string,
   now: Date,
   dateFormat: "america" | "europe",
 ): Date | null {
-  const engine = dateFormat === "europe" ? chrono.en.GB : chrono;
-  const [result] = engine.parse(input, now);
+  const hasSlash = /\d{1,2}\/\d{1,2}/.test(input);
+  const engine = dateFormat === "europe" && hasSlash ? chrono.en.GB : chrono;
+  const forwardDate = !PAST_INTENT.test(input);
+  const [result] = engine.parse(input, now, { forwardDate });
   if (result === undefined) return null;
   if (result.start.isCertain("hour")) return result.start.date();
 
