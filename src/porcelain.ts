@@ -383,22 +383,40 @@ export async function gatherTaskGroups(
           return { id, name: b?.name ?? id, icon: b?.icon ?? "", color: b?.color ?? "" };
         })();
 
-  // Group in first-seen board order, numbering as we go.
+  // Resolve each task's date up front so rows can be ordered by it.
+  const dated = await Promise.all(
+    shown.map(async (task) => ({ task, date: await taskDate(task, mdwal) })),
+  );
+
+  // Group in first-seen board order. Within a group, order by date: undated
+  // first, then chronologically (…yesterday, today, tomorrow…). Numbers are
+  // handed out in that display order.
   const groups: TaskGroup[] = [];
-  const groupByBoard = new Map<string, TaskGroup>();
-  for (const task of shown) {
-    let group = groupByBoard.get(task.board);
-    if (group === undefined) {
+  const groupByBoard = new Map<string, { group: TaskGroup; entries: { task: Task; date: Date | null }[] }>();
+  for (const entry of dated) {
+    let bucket = groupByBoard.get(entry.task.board);
+    if (bucket === undefined) {
       // A global listing tags each group with its workspace, so the shared board
       // header can draw "(name)"; a scoped one leaves it off.
-      group = { board: display(task.board), rows: [], ...(global ? { workspace: name } : {}) };
-      groupByBoard.set(task.board, group);
+      const group: TaskGroup = { board: display(entry.task.board), rows: [], ...(global ? { workspace: name } : {}) };
+      bucket = { group, entries: [] };
+      groupByBoard.set(entry.task.board, bucket);
       groups.push(group);
     }
-    // Global numbers are handed out from the store beside the workspaces, keyed by
-    // `<workspace>/<id>` so a number remembers which workspace its task lives in.
-    const number = await store.set(global ? `${name}/${task.id}` : task.id);
-    group.rows.push({ number, task, date: await taskDate(task, mdwal) });
+    bucket.entries.push(entry);
+  }
+  for (const { group, entries } of groupByBoard.values()) {
+    entries.sort((a, b) => {
+      if (a.date === null) return b.date === null ? 0 : -1;
+      if (b.date === null) return 1;
+      return a.date.getTime() - b.date.getTime();
+    });
+    for (const { task, date } of entries) {
+      // Global numbers are handed out from the store beside the workspaces, keyed by
+      // `<workspace>/<id>` so a number remembers which workspace its task lives in.
+      const number = await store.set(global ? `${name}/${task.id}` : task.id);
+      group.rows.push({ number, task, date });
+    }
   }
   return groups;
 }
