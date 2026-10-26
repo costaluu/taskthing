@@ -1,0 +1,1076 @@
+[
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "walk the dog",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "walk the dog d:[tomorrow]",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "pay rent d:[10/08/2026] b:[home]",
+    "ok": {
+      "title": "pay rent",
+      "rrule": "DTSTART:20261008T000000Z",
+      "board": "home"
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "stand-up r:[every weekday]",
+    "ok": {
+      "title": "stand-up",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "gym r:[every monday] d:[next monday]",
+    "ok": {
+      "title": "gym",
+      "rrule": "DTSTART:20260720T000000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "review r:[every 2 weeks]",
+    "ok": {
+      "title": "review",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "water plants r:[every day]",
+    "ok": {
+      "title": "water plants",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "report r:[every month]",
+    "ok": {
+      "title": "report",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "birthday r:[every year] d:[march 1]",
+    "ok": {
+      "title": "birthday",
+      "rrule": "DTSTART:20270301T000000Z\nRRULE:FREQ=YEARLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "sync r:[every monday and friday]",
+    "ok": {
+      "title": "sync",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "pills r:[every 3 days] d:[today at 18:00]",
+    "ok": {
+      "title": "pills",
+      "rrule": "DTSTART:20260715T180000Z\nRRULE:INTERVAL=3;FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "remind Ed: buy milk",
+    "ok": {
+      "title": "remind Ed: buy milk",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "empty board b:[]",
+    "ok": {
+      "title": "empty board",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "DATE:[Tomorrow] shouting tags",
+    "ok": {
+      "title": "shouting tags",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "spaced   out    title d:[friday]",
+    "ok": {
+      "title": "spaced out title",
+      "rrule": "DTSTART:20260717T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "bad date d:[deep clean]",
+    "error": "not a date: deep clean"
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "bad recurrence r:[whenever]",
+    "error": "not a recurrence: whenever"
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "walk the dog",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "walk the dog d:[tomorrow]",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "pay rent d:[10/08/2026] b:[home]",
+    "ok": {
+      "title": "pay rent",
+      "rrule": "DTSTART:20260810T000000Z",
+      "board": "home"
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "stand-up r:[every weekday]",
+    "ok": {
+      "title": "stand-up",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "gym r:[every monday] d:[next monday]",
+    "ok": {
+      "title": "gym",
+      "rrule": "DTSTART:20260720T000000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "review r:[every 2 weeks]",
+    "ok": {
+      "title": "review",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "water plants r:[every day]",
+    "ok": {
+      "title": "water plants",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "report r:[every month]",
+    "ok": {
+      "title": "report",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "birthday r:[every year] d:[march 1]",
+    "ok": {
+      "title": "birthday",
+      "rrule": "DTSTART:20270301T000000Z\nRRULE:FREQ=YEARLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "sync r:[every monday and friday]",
+    "ok": {
+      "title": "sync",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "pills r:[every 3 days] d:[today at 18:00]",
+    "ok": {
+      "title": "pills",
+      "rrule": "DTSTART:20260715T180000Z\nRRULE:INTERVAL=3;FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "remind Ed: buy milk",
+    "ok": {
+      "title": "remind Ed: buy milk",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "empty board b:[]",
+    "ok": {
+      "title": "empty board",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "DATE:[Tomorrow] shouting tags",
+    "ok": {
+      "title": "shouting tags",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "spaced   out    title d:[friday]",
+    "ok": {
+      "title": "spaced out title",
+      "rrule": "DTSTART:20260717T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "bad date d:[deep clean]",
+    "error": "not a date: deep clean"
+  },
+  {
+    "zone": "UTC",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "bad recurrence r:[whenever]",
+    "error": "not a recurrence: whenever"
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "walk the dog",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "walk the dog d:[tomorrow]",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "pay rent d:[10/08/2026] b:[home]",
+    "ok": {
+      "title": "pay rent",
+      "rrule": "DTSTART:20261008T000000Z",
+      "board": "home"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "stand-up r:[every weekday]",
+    "ok": {
+      "title": "stand-up",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "gym r:[every monday] d:[next monday]",
+    "ok": {
+      "title": "gym",
+      "rrule": "DTSTART:20260720T000000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "review r:[every 2 weeks]",
+    "ok": {
+      "title": "review",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "water plants r:[every day]",
+    "ok": {
+      "title": "water plants",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "report r:[every month]",
+    "ok": {
+      "title": "report",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "birthday r:[every year] d:[march 1]",
+    "ok": {
+      "title": "birthday",
+      "rrule": "DTSTART:20270301T000000Z\nRRULE:FREQ=YEARLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "sync r:[every monday and friday]",
+    "ok": {
+      "title": "sync",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "pills r:[every 3 days] d:[today at 18:00]",
+    "ok": {
+      "title": "pills",
+      "rrule": "DTSTART:20260715T210000Z\nRRULE:INTERVAL=3;FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "remind Ed: buy milk",
+    "ok": {
+      "title": "remind Ed: buy milk",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "empty board b:[]",
+    "ok": {
+      "title": "empty board",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "DATE:[Tomorrow] shouting tags",
+    "ok": {
+      "title": "shouting tags",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "spaced   out    title d:[friday]",
+    "ok": {
+      "title": "spaced out title",
+      "rrule": "DTSTART:20260717T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "bad date d:[deep clean]",
+    "error": "not a date: deep clean"
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "bad recurrence r:[whenever]",
+    "error": "not a recurrence: whenever"
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "walk the dog",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "walk the dog d:[tomorrow]",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "pay rent d:[10/08/2026] b:[home]",
+    "ok": {
+      "title": "pay rent",
+      "rrule": "DTSTART:20260810T000000Z",
+      "board": "home"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "stand-up r:[every weekday]",
+    "ok": {
+      "title": "stand-up",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "gym r:[every monday] d:[next monday]",
+    "ok": {
+      "title": "gym",
+      "rrule": "DTSTART:20260720T000000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "review r:[every 2 weeks]",
+    "ok": {
+      "title": "review",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "water plants r:[every day]",
+    "ok": {
+      "title": "water plants",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "report r:[every month]",
+    "ok": {
+      "title": "report",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "birthday r:[every year] d:[march 1]",
+    "ok": {
+      "title": "birthday",
+      "rrule": "DTSTART:20270301T000000Z\nRRULE:FREQ=YEARLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "sync r:[every monday and friday]",
+    "ok": {
+      "title": "sync",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "pills r:[every 3 days] d:[today at 18:00]",
+    "ok": {
+      "title": "pills",
+      "rrule": "DTSTART:20260715T210000Z\nRRULE:INTERVAL=3;FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "remind Ed: buy milk",
+    "ok": {
+      "title": "remind Ed: buy milk",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "empty board b:[]",
+    "ok": {
+      "title": "empty board",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "DATE:[Tomorrow] shouting tags",
+    "ok": {
+      "title": "shouting tags",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "spaced   out    title d:[friday]",
+    "ok": {
+      "title": "spaced out title",
+      "rrule": "DTSTART:20260717T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "bad date d:[deep clean]",
+    "error": "not a date: deep clean"
+  },
+  {
+    "zone": "America/Recife",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "bad recurrence r:[whenever]",
+    "error": "not a recurrence: whenever"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "walk the dog",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "walk the dog d:[tomorrow]",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "pay rent d:[10/08/2026] b:[home]",
+    "ok": {
+      "title": "pay rent",
+      "rrule": "DTSTART:20261008T000000Z",
+      "board": "home"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "stand-up r:[every weekday]",
+    "ok": {
+      "title": "stand-up",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "gym r:[every monday] d:[next monday]",
+    "ok": {
+      "title": "gym",
+      "rrule": "DTSTART:20260720T000000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "review r:[every 2 weeks]",
+    "ok": {
+      "title": "review",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "water plants r:[every day]",
+    "ok": {
+      "title": "water plants",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "report r:[every month]",
+    "ok": {
+      "title": "report",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "birthday r:[every year] d:[march 1]",
+    "ok": {
+      "title": "birthday",
+      "rrule": "DTSTART:20270301T000000Z\nRRULE:FREQ=YEARLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "sync r:[every monday and friday]",
+    "ok": {
+      "title": "sync",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "pills r:[every 3 days] d:[today at 18:00]",
+    "ok": {
+      "title": "pills",
+      "rrule": "DTSTART:20260715T090000Z\nRRULE:INTERVAL=3;FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "remind Ed: buy milk",
+    "ok": {
+      "title": "remind Ed: buy milk",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "empty board b:[]",
+    "ok": {
+      "title": "empty board",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "DATE:[Tomorrow] shouting tags",
+    "ok": {
+      "title": "shouting tags",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "spaced   out    title d:[friday]",
+    "ok": {
+      "title": "spaced out title",
+      "rrule": "DTSTART:20260717T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "bad date d:[deep clean]",
+    "error": "not a date: deep clean"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "america",
+    "input": "bad recurrence r:[whenever]",
+    "error": "not a recurrence: whenever"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "walk the dog",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "walk the dog d:[tomorrow]",
+    "ok": {
+      "title": "walk the dog",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "pay rent d:[10/08/2026] b:[home]",
+    "ok": {
+      "title": "pay rent",
+      "rrule": "DTSTART:20260810T000000Z",
+      "board": "home"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "stand-up r:[every weekday]",
+    "ok": {
+      "title": "stand-up",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "gym r:[every monday] d:[next monday]",
+    "ok": {
+      "title": "gym",
+      "rrule": "DTSTART:20260720T000000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "review r:[every 2 weeks]",
+    "ok": {
+      "title": "review",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "water plants r:[every day]",
+    "ok": {
+      "title": "water plants",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "report r:[every month]",
+    "ok": {
+      "title": "report",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "birthday r:[every year] d:[march 1]",
+    "ok": {
+      "title": "birthday",
+      "rrule": "DTSTART:20270301T000000Z\nRRULE:FREQ=YEARLY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "sync r:[every monday and friday]",
+    "ok": {
+      "title": "sync",
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "pills r:[every 3 days] d:[today at 18:00]",
+    "ok": {
+      "title": "pills",
+      "rrule": "DTSTART:20260715T090000Z\nRRULE:INTERVAL=3;FREQ=DAILY",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "remind Ed: buy milk",
+    "ok": {
+      "title": "remind Ed: buy milk",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "empty board b:[]",
+    "ok": {
+      "title": "empty board",
+      "rrule": null,
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "DATE:[Tomorrow] shouting tags",
+    "ok": {
+      "title": "shouting tags",
+      "rrule": "DTSTART:20260716T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "spaced   out    title d:[friday]",
+    "ok": {
+      "title": "spaced out title",
+      "rrule": "DTSTART:20260717T000000Z",
+      "board": null
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "bad date d:[deep clean]",
+    "error": "not a date: deep clean"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "now": "2026-07-15T14:30:00.000Z",
+    "dateFormat": "europe",
+    "input": "bad recurrence r:[whenever]",
+    "error": "not a recurrence: whenever"
+  }
+]

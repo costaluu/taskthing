@@ -1,0 +1,7 @@
+1784000000000001000::CREATE::task::alice0000000000000001::{"author":"alice","snapshot":{"board":"inbox","completed":false,"title":"shared","star":false,"rrule":null,"description":null,"deleted":false},"version":"0.1.0"}
+1784000000000002000::UPDATE_FIELD::task::alice0000000000000001::{"author":"alice","field":"title","value":"alice's title","version":"0.1.0"}
+1784000000000003000::UPDATE_FIELD::task::alice0000000000000001::{"author":"alice","field":"star","value":true,"version":"0.1.0"}
+1784000000000001500::UPDATE_FIELD::task::alice0000000000000001::{"author":"bob","field":"title","value":"bob's stale title","version":"0.1.0"}
+1784000000000003000::UPDATE_FIELD::task::alice0000000000000001::{"author":"bob","field":"star","value":false,"version":"0.1.0"}
+1784000000000004000::UPDATE_FIELD::task::alice0000000000000001::{"author":"bob","field":"description","value":"bob's note","version":"0.1.0"}
+1784000000000002000::CREATE::board::bob000000000000000001::{"author":"bob","snapshot":{"name":"bob's board","icon":"","color":"","deleted":false},"version":"0.1.0"}

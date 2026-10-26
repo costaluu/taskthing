@@ -1,0 +1,12 @@
+1784000000000001000::CREATE::board::alice0000000000000001::{"author":"alice","snapshot":{"name":"work","icon":"💼","color":"blue","deleted":false},"version":"0.1.0"}
+1784000000000002000::CREATE::task::alice0000000000000002::{"author":"alice","snapshot":{"board":"alice0000000000000001","completed":false,"title":"\"quoted\" back\\slash <b>&amp; ação 🎉 tab\tline para end","star":false,"rrule":null,"description":null,"deleted":false},"version":"0.1.0"}
+1784000000000003000::CREATE::task::alice0000000000000003::{"author":"alice","snapshot":{"board":"inbox","completed":false,"title":"plain","star":false,"rrule":null,"description":null,"deleted":false},"version":"0.1.0"}
+1784000000000004000::UPDATE_FIELD::task::alice0000000000000002::{"author":"alice","field":"description","value":"multi\nline \"q\"","version":"0.1.0"}
+1784000000000005000::UPDATE_FIELD::task::alice0000000000000002::{"author":"alice","field":"rrule","value":"DTSTART:20260722T090000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO","version":"0.1.0"}
+1784000000000006000::UPDATE_FIELD::task::alice0000000000000003::{"author":"alice","field":"completed","value":true,"version":"0.1.0"}
+1784000000000007000::UPDATE_FIELD::task::alice0000000000000003::{"author":"alice","field":"description","value":null,"version":"0.1.0"}
+1784000000000009000::CREATE::task::alice0000000000000004::{"author":"alice","snapshot":{"board":"inbox","completed":false,"title":"offline","star":false,"rrule":null,"description":null,"deleted":false},"version":"0.1.0"}
+1784000000000010000::CREATE_FOLDER::note::::{"author":"alice","version":"0.1.0"}
+1784000000000011000::RENAME_FOLDER::note::::{"author":"alice","to":"memo","version":"0.1.0"}
+1784000000000012000::TRUNCATE_FOLDER::memo::::{"author":"alice","version":"0.1.0"}
+1784000000000013000::DELETE_FOLDER::memo::::{"author":"alice","version":"0.1.0"}

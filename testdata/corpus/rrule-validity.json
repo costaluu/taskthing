@@ -1,0 +1,54 @@
+[
+  {
+    "rrule": "",
+    "valid": true
+  },
+  {
+    "rrule": "garbage",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:20260722T090000Z",
+    "valid": true
+  },
+  {
+    "rrule": "RRULE:FREQ=WEEKLY",
+    "valid": true
+  },
+  {
+    "rrule": "RRULE:FREQ=BOGUS",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:2026",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:20260722T090000Z\nRRULE:FREQ=DAILY;FOO=1",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:20260722T090000Z\nRRULE:FREQ=DAILY;BYDAY=XX",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:20260722T090000Z\nRRULE:FREQ=DAILY;BYDAY=0MO",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:20260722T090000Z\nRRULE:FREQ=DAILY;BYSETPOS=0",
+    "valid": false
+  },
+  {
+    "rrule": " DTSTART:20260722T090000Z",
+    "valid": true
+  },
+  {
+    "rrule": "EXDATE:20260722T090000Z",
+    "valid": false
+  },
+  {
+    "rrule": "DTSTART:20260722T090000Z\nRRULE:FREQ=DAILY;UNTIL=bad",
+    "valid": false
+  }
+]

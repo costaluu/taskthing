@@ -63,7 +63,7 @@ The numbers (`1`, `2`, …) are ephemeral references handed out by the most rece
 
 ### The `add` grammar
 
-`add` reads natural-language date and recurrence out of the input via a strict bracket syntax (dates parsed with [chrono](https://github.com/wanasit/chrono), recurrence with [rrule](https://github.com/jkbrzt/rrule)):
+`add` reads natural-language date and recurrence out of the input via a strict bracket syntax (dates parsed by a port of [chrono](https://github.com/wanasit/chrono), recurrence by a port of [rrule](https://github.com/jkbrzt/rrule)):
 
 | Tag                         | Meaning                                                |
 | --------------------------- | ------------------------------------------------------ |
@@ -105,6 +105,8 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | `board set icon <id> <icon>`               | Set a board's icon                                           |
 | `board set color <id> <ansi-color>`        | Set a board's colour (ANSI 16)                               |
 | `board delete <id>` / `board recover <id>` | Soft-delete / restore a board (its tasks fall back to inbox) |
+| `board delete <id> --tasks`                | Soft-delete a board and its tasks                            |
+| `board clear <id>`                         | Soft-delete every task of a board, keeping the board         |
 
 ### Workspaces
 
@@ -173,15 +175,16 @@ Everything lives under `~/.config/taskthing/`:
 
 ## Build from source
 
-taskthing is written in TypeScript and built with **[Bun](https://bun.com)**.
+taskthing is written in Go (it was ported 1:1 from an earlier TypeScript/Bun implementation; files, logs and output are byte-compatible with it).
 
 ```sh
-bun install
-bun test                                             # run the test suite
-bun src/index.ts <command>                           # run without compiling
-bun run scripts/build.ts                             # compile a binary for this machine
-bun run scripts/build.ts all                         # compile every released target
+go test ./...                                        # run the test suite
+go run ./cmd/taskthing <command>                     # run without compiling
+scripts/build.sh                                     # compile a binary for this machine into dist/
+scripts/build.sh all                                 # compile every released target
 ```
+
+The black-box suite (`cmd/taskthing/cli_test.go`) runs the binary as its own process, and can judge any build: `TASKTHING_BIN=<path> go test ./cmd/taskthing/`. `testdata/` holds the reference on-disk formats and the date/recurrence corpora the TS implementation produced.
 
 Release binaries are cut by CI on a semver tag (`git tag v1.2.3 && git push --tags`) — one per OS/arch, attached to the GitHub release, which is what `update` and the installers download.
 

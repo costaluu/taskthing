@@ -1,0 +1,794 @@
+[
+  {
+    "zone": "UTC",
+    "text": "every day",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "text": "every day"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every 2 days",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=DAILY",
+      "text": "every 2 days"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every weekday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "text": "every weekday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every week",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY",
+      "text": "every week"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every 3 weeks",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=3;FREQ=WEEKLY",
+      "text": "every 3 weeks"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every month",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "text": "every month"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every year",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY",
+      "text": "every year"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every monday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "text": "every week on Monday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every monday and friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "text": "every week on Monday, Friday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every tue, thu",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=TU,TH",
+      "text": "every week on Tuesday, Thursday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every hour",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=HOURLY",
+      "text": "every hour"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every 15 minutes",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=15;FREQ=MINUTELY",
+      "text": "every 15 minutes"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every week on friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=FR",
+      "text": "every week on Friday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every 2 weeks on monday and wednesday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY;BYDAY=MO,WE",
+      "text": "every 2 weeks on Monday, Wednesday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every month on the 15th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=15",
+      "text": "every month on the 15th"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every month on the last day",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=-1",
+      "text": "every month on the last"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every month on the 1st and 15th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1,15",
+      "text": "every month on the 1st and 15th"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every month on the first monday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYDAY=+1MO",
+      "text": "every month on the 1st Monday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every month on the 2nd last friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYDAY=-2FR",
+      "text": "every month on the 2nd last Friday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every january",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYMONTH=1",
+      "text": "every January"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every march and june on the 1st",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYMONTH=3,6;BYMONTHDAY=1",
+      "text": "every March and June on the 1st"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every year in week 3",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYWEEKNO=3",
+      "text": "every year in week 3"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every weekday at 9",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9",
+      "text": "every weekday"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every day at 8, 20",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;BYHOUR=8,20",
+      "text": "every day at 8 and 20"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every week for 3 times",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;COUNT=3",
+      "text": "every week for 3 times"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every day for 1 time",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;COUNT=1",
+      "text": "every day for 1 time"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every day until December 31, 2026",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;UNTIL=20261231T000000Z",
+      "text": "every day until December 31, 2026"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "every monday on the 13th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO;BYMONTHDAY=13",
+      "text": "every week on Monday the 13th"
+    }
+  },
+  {
+    "zone": "UTC",
+    "text": "whenever",
+    "ok": null
+  },
+  {
+    "zone": "UTC",
+    "text": "every",
+    "error": "Unexpected end"
+  },
+  {
+    "zone": "UTC",
+    "text": "",
+    "ok": null
+  },
+  {
+    "zone": "UTC",
+    "text": "every two weeks",
+    "error": "Unknown symbol"
+  },
+  {
+    "zone": "UTC",
+    "text": "monday",
+    "error": "expected every but found monday"
+  },
+  {
+    "zone": "UTC",
+    "text": "daily",
+    "ok": null
+  },
+  {
+    "zone": "UTC",
+    "text": "every day for",
+    "error": "null is not an object (evaluating 'ttr.value[0]')"
+  },
+  {
+    "zone": "UTC",
+    "text": "every month on the 400th",
+    "error": "Nth out of range: 400"
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every day",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "text": "every day"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every 2 days",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=DAILY",
+      "text": "every 2 days"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every weekday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "text": "every weekday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every week",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY",
+      "text": "every week"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every 3 weeks",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=3;FREQ=WEEKLY",
+      "text": "every 3 weeks"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "text": "every month"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every year",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY",
+      "text": "every year"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every monday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "text": "every week on Monday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every monday and friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "text": "every week on Monday, Friday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every tue, thu",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=TU,TH",
+      "text": "every week on Tuesday, Thursday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every hour",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=HOURLY",
+      "text": "every hour"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every 15 minutes",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=15;FREQ=MINUTELY",
+      "text": "every 15 minutes"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every week on friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=FR",
+      "text": "every week on Friday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every 2 weeks on monday and wednesday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY;BYDAY=MO,WE",
+      "text": "every 2 weeks on Monday, Wednesday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month on the 15th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=15",
+      "text": "every month on the 15th"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month on the last day",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=-1",
+      "text": "every month on the last"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month on the 1st and 15th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1,15",
+      "text": "every month on the 1st and 15th"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month on the first monday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYDAY=+1MO",
+      "text": "every month on the 1st Monday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month on the 2nd last friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYDAY=-2FR",
+      "text": "every month on the 2nd last Friday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every january",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYMONTH=1",
+      "text": "every January"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every march and june on the 1st",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYMONTH=3,6;BYMONTHDAY=1",
+      "text": "every March and June on the 1st"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every year in week 3",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYWEEKNO=3",
+      "text": "every year in week 3"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every weekday at 9",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9",
+      "text": "every weekday"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every day at 8, 20",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;BYHOUR=8,20",
+      "text": "every day at 8 and 20"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every week for 3 times",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;COUNT=3",
+      "text": "every week for 3 times"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every day for 1 time",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;COUNT=1",
+      "text": "every day for 1 time"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every day until December 31, 2026",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;UNTIL=20261231T030000Z",
+      "text": "every day until December 31, 2026"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every monday on the 13th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO;BYMONTHDAY=13",
+      "text": "every week on Monday the 13th"
+    }
+  },
+  {
+    "zone": "America/Recife",
+    "text": "whenever",
+    "ok": null
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every",
+    "error": "Unexpected end"
+  },
+  {
+    "zone": "America/Recife",
+    "text": "",
+    "ok": null
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every two weeks",
+    "error": "Unknown symbol"
+  },
+  {
+    "zone": "America/Recife",
+    "text": "monday",
+    "error": "expected every but found monday"
+  },
+  {
+    "zone": "America/Recife",
+    "text": "daily",
+    "ok": null
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every day for",
+    "error": "null is not an object (evaluating 'ttr.value[0]')"
+  },
+  {
+    "zone": "America/Recife",
+    "text": "every month on the 400th",
+    "error": "Nth out of range: 400"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every day",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY",
+      "text": "every day"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every 2 days",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=DAILY",
+      "text": "every 2 days"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every weekday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "text": "every weekday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every week",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY",
+      "text": "every week"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every 3 weeks",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=3;FREQ=WEEKLY",
+      "text": "every 3 weeks"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY",
+      "text": "every month"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every year",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY",
+      "text": "every year"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every monday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO",
+      "text": "every week on Monday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every monday and friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,FR",
+      "text": "every week on Monday, Friday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every tue, thu",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=TU,TH",
+      "text": "every week on Tuesday, Thursday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every hour",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=HOURLY",
+      "text": "every hour"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every 15 minutes",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=15;FREQ=MINUTELY",
+      "text": "every 15 minutes"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every week on friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=FR",
+      "text": "every week on Friday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every 2 weeks on monday and wednesday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:INTERVAL=2;FREQ=WEEKLY;BYDAY=MO,WE",
+      "text": "every 2 weeks on Monday, Wednesday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month on the 15th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=15",
+      "text": "every month on the 15th"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month on the last day",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=-1",
+      "text": "every month on the last"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month on the 1st and 15th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1,15",
+      "text": "every month on the 1st and 15th"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month on the first monday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYDAY=+1MO",
+      "text": "every month on the 1st Monday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month on the 2nd last friday",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=MONTHLY;BYDAY=-2FR",
+      "text": "every month on the 2nd last Friday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every january",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYMONTH=1",
+      "text": "every January"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every march and june on the 1st",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYMONTH=3,6;BYMONTHDAY=1",
+      "text": "every March and June on the 1st"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every year in week 3",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=YEARLY;BYWEEKNO=3",
+      "text": "every year in week 3"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every weekday at 9",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9",
+      "text": "every weekday"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every day at 8, 20",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;BYHOUR=8,20",
+      "text": "every day at 8 and 20"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every week for 3 times",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;COUNT=3",
+      "text": "every week for 3 times"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every day for 1 time",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;COUNT=1",
+      "text": "every day for 1 time"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every day until December 31, 2026",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=DAILY;UNTIL=20261230T150000Z",
+      "text": "every day until December 30, 2026"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every monday on the 13th",
+    "ok": {
+      "rrule": "DTSTART:20260715T143000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO;BYMONTHDAY=13",
+      "text": "every week on Monday the 13th"
+    }
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "whenever",
+    "ok": null
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every",
+    "error": "Unexpected end"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "",
+    "ok": null
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every two weeks",
+    "error": "Unknown symbol"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "monday",
+    "error": "expected every but found monday"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "daily",
+    "ok": null
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every day for",
+    "error": "null is not an object (evaluating 'ttr.value[0]')"
+  },
+  {
+    "zone": "Asia/Tokyo",
+    "text": "every month on the 400th",
+    "error": "Nth out of range: 400"
+  }
+]
