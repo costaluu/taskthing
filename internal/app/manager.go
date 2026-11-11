@@ -40,10 +40,34 @@ func newManager(root string, m *mdwal.Mdwal, author func() string) *manager {
 	return &manager{root: root, m: m, author: author}
 }
 
-// shellError is Bun's ShellError for a command that exited non-zero.
-type shellError struct{ code int }
+// shellError is Bun's ShellError for a command that exited non-zero, plus the
+// reason it wrote to stderr (git's "fatal: …"), so the user sees why.
+type shellError struct {
+	code   int
+	reason string
+}
 
-func (e *shellError) Error() string { return fmt.Sprintf("Failed with exit code %d", e.code) }
+func (e *shellError) Error() string {
+	if e.reason == "" {
+		return fmt.Sprintf("Failed with exit code %d", e.code)
+	}
+	return fmt.Sprintf("Failed with exit code %d: %s", e.code, e.reason)
+}
+
+// gitReason is the first "fatal:"/"error:" line of stderr (the specific one;
+// the lines after it are generic advice), else its last line.
+func gitReason(stderr string) string {
+	lines := nonEmptyLines(stderr)
+	for _, l := range lines {
+		if t := js.Trim(l); strings.HasPrefix(t, "fatal:") || strings.HasPrefix(t, "error:") {
+			return t
+		}
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	return js.Trim(lines[len(lines)-1])
+}
 
 type gitRun struct {
 	stdin string
@@ -59,13 +83,14 @@ func (g *manager) run(opts gitRun, name string, args ...string) (string, error) 
 	}
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	cmd.Stderr = &bytes.Buffer{}
+	var errOut bytes.Buffer
+	cmd.Stderr = &errOut
 	err := cmd.Run()
 	if err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
-			return out.String(), &shellError{exit.ExitCode()}
+			return out.String(), &shellError{exit.ExitCode(), gitReason(errOut.String())}
 		}
-		return out.String(), &shellError{1}
+		return out.String(), &shellError{1, err.Error()}
 	}
 	return out.String(), nil
 }

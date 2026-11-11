@@ -200,6 +200,9 @@ func addCommand() *Command {
 				if err != nil {
 					return taskOutcome{}, err
 				}
+				if parsed.title == "" {
+					return taskOutcome{}, errors.New("a task needs a title — `add \"<title> d:[…] r:[…] b:[…]\"`")
+				}
 				boards := boardRepository(m)
 				boardID := mdwal.INBOX
 				if parsed.board != nil {
@@ -260,6 +263,24 @@ func listCommand() *Command {
 					return err
 				}
 				names = []string{name}
+			}
+			// Filters are checked before any numbering is reset, so a typo
+			// doesn't cost the numbers the last listing handed out.
+			if f.period != nil {
+				if _, err := periodEnd(*f.period, now()); err != nil {
+					return err
+				}
+			}
+			if f.inBoard != nil {
+				for _, n := range names {
+					m, _, err := openWorkspace(workspacePath(n))
+					if err != nil {
+						return err
+					}
+					if _, err := inBoardFilter(f, boardRepository(m), workspacePath(n)); err != nil {
+						return err
+					}
+				}
 			}
 			var store kvStore
 			if global {
@@ -453,6 +474,20 @@ func deleteBoardTasks(tasks repository, boardID string) (int, error) {
 
 var boardFieldNames = []string{"name", "icon", "color"}
 
+// assertBoardNameFree: names resolve boards, so two live boards can't share one.
+func assertBoardNameFree(boards repository, name, exceptID string) error {
+	taken, err := boards.filter(func(b *js.Object) bool {
+		return !boolean(b, "deleted") && str(b, "name") == name && str(b, "id") != exceptID
+	})
+	if err != nil {
+		return err
+	}
+	if len(taken) > 0 {
+		return fmt.Errorf("a board named %s already exists", name)
+	}
+	return nil
+}
+
 func setBoardField(field, action, predicate, connector string) *Command {
 	return &Command{Name: field, Description: action, Options: []Option{workspaceOption()},
 		Handler: func(c *Ctx) error {
@@ -463,8 +498,18 @@ func setBoardField(field, action, predicate, connector string) *Command {
 			}
 			return onBoard(action, reference, workspaceFlag(c), func(board *js.Object, boards repository, _ *mdwal.Mdwal, _ string) (entityOutcome, error) {
 				next := strings.Join(rest, " ")
-				if field == "name" && js.Trim(next) == "" {
-					return entityOutcome{}, errors.New("a board needs a name — `board set name <board> <new name>`")
+				if field == "name" {
+					if js.Trim(next) == "" {
+						return entityOutcome{}, errors.New("a board needs a name — `board set name <board> <new name>`")
+					}
+					if err := assertBoardNameFree(boards, next, str(board, "id")); err != nil {
+						return entityOutcome{}, err
+					}
+				}
+				if field == "color" && next != "" {
+					if _, ok := foreground[next]; !ok {
+						return entityOutcome{}, fmt.Errorf("not a colour: %s — try one of %s, or nothing to clear it", next, strings.Join(inkColorNames, ", "))
+					}
 				}
 				if _, err := boards.update(with(board, field, next)); err != nil {
 					return entityOutcome{}, err
@@ -490,6 +535,12 @@ func boardCommand() *Command {
 						}
 						m, _, err := openWorkspace(root)
 						if err != nil {
+							return entityOutcome{}, err
+						}
+						if js.Trim(name) == "" {
+							return entityOutcome{}, errors.New("a board needs a name — `board add <name>`")
+						}
+						if err := assertBoardNameFree(boardRepository(m), name, ""); err != nil {
 							return entityOutcome{}, err
 						}
 						if _, err := boardRepository(m).create(js.Obj("name", name, "icon", icon)); err != nil {
@@ -839,24 +890,29 @@ func configCommand() *Command {
 			var coerced any = value
 			switch key {
 			case "nerdfont":
+				if value != "true" && value != "false" {
+					return fmt.Errorf("nerdfont is true or false, not %s", js.Quote(value))
+				}
 				coerced = value == "true"
 			case "autoSync", "autoRebuild", "autoTruncate":
 				coerced = js.ToNumber(value)
 			case "theme":
 				// Checked here, not on use: a bad theme would fail every terminal command.
 				if _, err := createTheme(value); err != nil {
-					return fmt.Errorf("not a theme — expected a JSON object of role: ANSI colour 0-15, e.g. {\"success\":2}\n%s", err)
+					return fmt.Errorf("not a theme: %s — expected a JSON object of role: ANSI colour 0-15, e.g. {\"success\":2}", readableIssues(err.Error()))
 				}
 			}
 			current, err := readConfig()
 			if err != nil {
 				return err
 			}
-			parsed, err := mdwal.ConfigSchema.Parse(with(current, key, coerced))
-			if err != nil {
-				return err
-			}
-			return writeConfig(parsed)
+			return reportConfig(current, key, func() error {
+				parsed, err := mdwal.ConfigSchema.Parse(with(current, key, coerced))
+				if err != nil {
+					return err
+				}
+				return writeConfig(parsed)
+			})
 		}}},
 	}
 }

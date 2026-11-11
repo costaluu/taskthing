@@ -537,6 +537,9 @@ func stableSort[T any](items []T, cmp func(a, b T) float64) {
 // resolveTask turns what the user typed into a task: a listed number (this
 // workspace's, else a global listing's), or a raw id.
 func resolveTask(reference, workspace string) (string, string, error) {
+	if js.Trim(reference) == "" {
+		return "", "", errors.New("no task given — pass a number from `taskthing list` or a task id")
+	}
 	root, err := targetWorkspace(workspace)
 	if err != nil {
 		return "", "", err
@@ -563,6 +566,9 @@ func resolveTask(reference, workspace string) (string, string, error) {
 
 // resolveBoard: `inbox`, a listed number, a live board's name, or a raw id.
 func resolveBoard(boards repository, root, reference string) (string, error) {
+	if js.Trim(reference) == "" {
+		return "", errors.New("no board given — pass a name, a number from `taskthing board list`, or inbox")
+	}
 	if strings.ToLower(js.Trim(reference)) == "inbox" {
 		return mdwal.INBOX, nil
 	}

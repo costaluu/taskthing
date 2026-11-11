@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -232,7 +233,15 @@ func findOption(options []Option, name string) (Option, bool) {
 	return Option{}, false
 }
 
-func parseArgs(args []string, options []Option, command string) (map[string]any, []string, error) {
+// negativeNumber is an argument like -1: a (bad) reference, not a short flag.
+var negativeNumber = regexp.MustCompile(`^-\d+(\.\d+)?$`)
+
+// parseArgs reads options and positionals. strict refuses an option the
+// command doesn't declare, so a mistyped flag fails instead of being dropped.
+func parseArgs(args []string, options []Option, command string, strict bool) (map[string]any, []string, error) {
+	unknown := func(arg string) error {
+		return &ValidationError{Message: fmt.Sprintf("Unknown option '%s' — see `--help` for this command's options, or put `--` before text that starts with -", arg), Command: command, Option: strings.TrimLeft(arg, "-")}
+	}
 	flags := map[string]any{}
 	var positional []string
 	stop := false
@@ -265,6 +274,9 @@ func parseArgs(args []string, options []Option, command string) (map[string]any,
 			}
 			o, ok := findOption(options, name)
 			if name == "" || !ok {
+				if strict {
+					return nil, nil, unknown(arg)
+				}
 				continue
 			}
 			value := inline
@@ -281,7 +293,7 @@ func parseArgs(args []string, options []Option, command string) (map[string]any,
 				return nil, nil, err
 			}
 			flags[name] = v
-		case strings.HasPrefix(arg, "-") && len(arg) > 1:
+		case strings.HasPrefix(arg, "-") && len(arg) > 1 && !negativeNumber.MatchString(arg):
 			short := arg[1:]
 			var o Option
 			found := false
@@ -291,6 +303,9 @@ func parseArgs(args []string, options []Option, command string) (map[string]any,
 				}
 			}
 			if !found {
+				if strict {
+					return nil, nil, unknown(arg)
+				}
 				continue
 			}
 			var value *string
@@ -465,7 +480,7 @@ func (c *CLI) Run(argv []string) int {
 		}
 		globals = kept
 	}
-	globalParsed, _, err := parseArgs(commandArgs, globals, "__global__")
+	globalParsed, _, err := parseArgs(commandArgs, globals, "__global__", false)
 	if err != nil {
 		c.printError(err, resolveFormat(explicit))
 		return 1
@@ -531,10 +546,13 @@ func (c *CLI) Run(argv []string) int {
 			all = append(all, a)
 		}
 	}
-	all = append(all, passthrough...)
+	if passthrough != nil {
+		// Everything after `--` stays positional, even when it looks like a flag.
+		all = append(append(all, "--"), passthrough...)
+	}
 
 	options := append(append([]Option(nil), globalFlags...), command.Options...)
-	flags, positional, err := parseArgs(all, options, command.Name)
+	flags, positional, err := parseArgs(all, options, command.Name, true)
 	if err == nil {
 		err = command.Handler(&Ctx{Flags: flags, Positional: positional})
 		var exit *exitError

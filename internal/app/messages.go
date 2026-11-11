@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -179,9 +180,33 @@ func namedMessage(noun string, o entityOutcome) []segment {
 
 // summarize is an error's first line.
 func summarize(err error) string {
-	msg := err.Error()
+	msg := readableIssues(err.Error())
 	first, _, _ := strings.Cut(msg, "\n")
 	return js.Trim(first)
+}
+
+// readableIssues turns a schema failure (zod's JSON list of issues) into one
+// line of words, "path: message; …"; any other message passes through.
+func readableIssues(msg string) string {
+	var issues []struct {
+		Path    []any  `json:"path"`
+		Message string `json:"message"`
+	}
+	if !strings.HasPrefix(js.Trim(msg), "[") || json.Unmarshal([]byte(msg), &issues) != nil || len(issues) == 0 {
+		return msg
+	}
+	parts := make([]string, len(issues))
+	for i, issue := range issues {
+		path := make([]string, len(issue.Path))
+		for j, p := range issue.Path {
+			path[j] = fmt.Sprint(p)
+		}
+		parts[i] = issue.Message
+		if len(path) > 0 {
+			parts[i] = strings.Join(path, ".") + ": " + issue.Message
+		}
+	}
+	return strings.Join(parts, "; ")
 }
 
 func taskFailure(verb string, err error) string {

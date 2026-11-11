@@ -1337,3 +1337,117 @@ func TestConfigSetRefusesBadTheme(t *testing.T) {
 	contains(t, taskthing(t, home, "config").stdout, `"success":2`)
 	mustCode(t, taskthing(t, home, "config set", "theme", ""), 0)
 }
+
+// Refusals name the problem in words, never as a raw schema dump.
+func readable(t *testing.T, r run, pattern string) {
+	t.Helper()
+	mustCode(t, r, 1)
+	out := r.stdout + r.stderr
+	matches(t, out, pattern)
+	lacks(t, out, "error: [")
+	lacks(t, out, `\"code\"`)
+}
+
+func TestAddRefusesBlankTitle(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	for _, blank := range []string{"", "   ", "d:[tomorrow]", "b:[inbox]"} {
+		readable(t, taskthing(t, home, "add", blank), `(?i)title`)
+	}
+	equal(t, len(tasks(t, home)), 0)
+}
+
+func TestBoardAddRefusesBlankAndDuplicate(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	readable(t, taskthing(t, home, "board add"), `(?i)name`)
+	readable(t, taskthing(t, home, "board add", "   "), `(?i)name`)
+	mustCode(t, taskthing(t, home, "board add", "work"), 0)
+	readable(t, taskthing(t, home, "board add", "work"), `(?i)already`)
+	mustCode(t, taskthing(t, home, "board add", "home"), 0)
+	readable(t, taskthing(t, home, "board set name", "home", "work"), `(?i)already`)
+	mustCode(t, taskthing(t, home, "board set name", "home", "home"), 0)
+	equal(t, len(readAll(t, "board", home)), 2)
+	// A deleted board's name is free again.
+	mustCode(t, taskthing(t, home, "board delete", "home"), 0)
+	mustCode(t, taskthing(t, home, "board add", "home"), 0)
+}
+
+func TestBoardColorIsAnAnsiName(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "board add", "work")
+	for _, bad := range []string{"banana", "#ff0000", "rgb(1,2,3)", "999"} {
+		readable(t, taskthing(t, home, "board set color", "work", bad), `(?i)colou?r`)
+	}
+	equal(t, get(readAll(t, "board", home)[0], "color"), any(""))
+	mustCode(t, taskthing(t, home, "board set color", "work", "redBright"), 0)
+	equal(t, get(readAll(t, "board", home)[0], "color"), any("redBright"))
+	mustCode(t, taskthing(t, home, "board set color", "work"), 0)
+	equal(t, get(readAll(t, "board", home)[0], "color"), any(""))
+}
+
+func TestBadListFilterKeepsNumbers(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	seedTask(t, home, js.Obj("title", "undated"))
+	taskthing(t, home, "list")
+	readable(t, taskthing(t, home, "list", "--period=abc"), `not a period`)
+	readable(t, taskthing(t, home, "list", "--in-board=nope"), `no such board`)
+	mustCode(t, taskthing(t, home, "star", "1"), 0)
+	equal(t, flag(tasks(t, home)[0], "star"), true)
+}
+
+func TestMissingReferenceIsNamed(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	for _, cmd := range []string{"check", "star", "delete", "set title", "set description"} {
+		r := taskthing(t, home, cmd)
+		readable(t, r, `(?i)no task given`)
+		lacks(t, r.stdout+r.stderr, "numbered 0")
+	}
+	for _, cmd := range []string{"board delete", "board clear", "board recover", "board set icon"} {
+		readable(t, taskthing(t, home, cmd), `(?i)no board given`)
+	}
+}
+
+func TestUnknownOptionRefused(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dog")
+	taskthing(t, home, "list")
+	r := taskthing(t, home, "check", "1", "--chekced")
+	mustCode(t, r, 1)
+	contains(t, r.stdout+r.stderr, "chekced")
+	mustCode(t, taskthing(t, home, "check", "1", "-x"), 1)
+	equal(t, flag(tasks(t, home)[0], "completed"), false)
+	// A negative number is a (bad) reference, not a flag.
+	negative := taskthing(t, home, "check", "-1")
+	mustCode(t, negative, 1)
+	contains(t, negative.stdout+negative.stderr, "-1")
+	// Known options, globals and `--` passthrough still work.
+	mustCode(t, taskthing(t, home, "list", "--checked", "--format", "json"), 0)
+	mustCode(t, taskthing(t, home, "add", "--", "--literal title"), 0)
+	contains(t, taskthing(t, home, "list").stdout, "--literal title")
+}
+
+func TestConfigSetValidatesAndReports(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	readable(t, taskthing(t, home, "config set", "nerdfont", "yes"), `(?i)true|false`)
+	readable(t, taskthing(t, home, "config set", "dateFormat", "klingon"), `america`)
+	readable(t, taskthing(t, home, "config set", "autoSync", "abc"), `(?i)number`)
+	readable(t, taskthing(t, home, "config set", "theme", `{"success":99}`), `(?i)success`)
+	ok := taskthing(t, home, "config set", "nerdfont", "false")
+	mustCode(t, ok, 0)
+	contains(t, ok.stdout, "updated")
+}
+
+func TestRemoteAddSurfacesGitReason(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	r := taskthing(t, home, "workspace remote add", filepath.Join(t.TempDir(), "not-a-repo"))
+	mustCode(t, r, 1)
+	// git's own reason names the path; its wording depends on the locale.
+	matches(t, r.stdout+r.stderr, `fatal: .*not-a-repo`)
+}
