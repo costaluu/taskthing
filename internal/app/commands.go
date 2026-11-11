@@ -255,13 +255,9 @@ func listCommand() *Command {
 				}
 				names = all
 			} else {
-				name := workspaceFlag(c)
-				if name == "" {
-					current, err := currentWorkspaceName()
-					if err != nil {
-						return err
-					}
-					name = current
+				name, err := targetWorkspaceName(workspaceFlag(c))
+				if err != nil {
+					return err
 				}
 				names = []string{name}
 			}
@@ -325,6 +321,9 @@ func setCommand() *Command {
 		}),
 		Commands: []*Command{
 			field("title", "retitle a task", func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
+				if js.Trim(value) == "" {
+					return taskOutcome{}, errors.New("a task needs a title — `set title <task> <new title>`")
+				}
 				if _, err := tasks.update(with(task, "title", value)); err != nil {
 					return taskOutcome{}, err
 				}
@@ -464,6 +463,9 @@ func setBoardField(field, action, predicate, connector string) *Command {
 			}
 			return onBoard(action, reference, workspaceFlag(c), func(board *js.Object, boards repository, _ *mdwal.Mdwal, _ string) (entityOutcome, error) {
 				next := strings.Join(rest, " ")
+				if field == "name" && js.Trim(next) == "" {
+					return entityOutcome{}, errors.New("a board needs a name — `board set name <board> <new name>`")
+				}
 				if _, err := boards.update(with(board, field, next)); err != nil {
 					return entityOutcome{}, err
 				}
@@ -618,6 +620,12 @@ func workspaceCommand() *Command {
 			{Name: "create", Description: "create a workspace", Handler: func(c *Ctx) error {
 				name := first(c.Positional)
 				return reportWorkspace("create this workspace", func(*js.Object) (entityOutcome, error) {
+					if err := checkWorkspaceName(name); err != nil {
+						return entityOutcome{}, err
+					}
+					if assertWorkspaceExists(name) == nil {
+						return entityOutcome{}, fmt.Errorf("workspace %s already exists", name)
+					}
 					if err := nodefs.MkdirAll(workspacePath(name)); err != nil {
 						return entityOutcome{}, err
 					}
@@ -634,6 +642,12 @@ func workspaceCommand() *Command {
 				return reportWorkspace("rename this workspace", func(*js.Object) (entityOutcome, error) {
 					if err := assertWorkspaceExists(name); err != nil {
 						return entityOutcome{}, err
+					}
+					if err := checkWorkspaceName(second); err != nil {
+						return entityOutcome{}, err
+					}
+					if assertWorkspaceExists(second) == nil {
+						return entityOutcome{}, fmt.Errorf("workspace %s already exists", second)
 					}
 					if err := nodefs.Rename(workspacePath(name), workspacePath(second)); err != nil {
 						return entityOutcome{}, err
@@ -828,6 +842,11 @@ func configCommand() *Command {
 				coerced = value == "true"
 			case "autoSync", "autoRebuild", "autoTruncate":
 				coerced = js.ToNumber(value)
+			case "theme":
+				// Checked here, not on use: a bad theme would fail every terminal command.
+				if _, err := createTheme(value); err != nil {
+					return fmt.Errorf("not a theme — expected a JSON object of role: ANSI colour 0-15, e.g. {\"success\":2}\n%s", err)
+				}
 			}
 			current, err := readConfig()
 			if err != nil {

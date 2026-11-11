@@ -117,6 +117,7 @@ func (s kvStore) reset() error { return s.save(js.NewObject()) }
 type repository struct {
 	m          *mdwal.Mdwal
 	entityType string
+	schema     *mdwal.Schema
 }
 
 func (r repository) create(model *js.Object) (*js.Object, error) {
@@ -180,12 +181,16 @@ func unchanged(next, stored any) bool {
 	return false
 }
 
-// update writes one field event per changed field.
+// update writes one field event per changed field. The model is checked
+// against the schema first: a value reads would refuse is never written.
 func (r repository) update(model *js.Object) (bool, error) {
 	id, _ := model.Value("id").(string)
 	current := r.findByID(id)
 	if current == nil {
 		return false, nil
+	}
+	if _, err := r.schema.Parse(model); err != nil {
+		return false, err
 	}
 	for _, field := range model.Keys() {
 		if field == "id" {
@@ -212,8 +217,8 @@ func (r repository) setDeleted(id string, value bool) (bool, error) {
 	return true, r.m.UpdateField(r.entityType, id, "deleted", value, nil)
 }
 
-func taskRepository(m *mdwal.Mdwal) repository  { return repository{m, "task"} }
-func boardRepository(m *mdwal.Mdwal) repository { return repository{m, "board"} }
+func taskRepository(m *mdwal.Mdwal) repository  { return repository{m, "task", mdwal.TaskFields} }
+func boardRepository(m *mdwal.Mdwal) repository { return repository{m, "board", mdwal.BoardFields} }
 
 // with is `{ ...model, key: value }`.
 func with(model *js.Object, kv ...any) *js.Object {

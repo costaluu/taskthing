@@ -65,11 +65,27 @@ func currentWorkspaceName() (string, error) {
 
 func workspacePath(name string) string { return filepath.Join(dataHome(), "workspaces", name) }
 
+// targetWorkspaceName: an explicit --workspace must name an existing one, so a
+// typo fails instead of silently creating a new workspace.
 func targetWorkspaceName(named string) (string, error) {
 	if named != "" {
+		if err := assertWorkspaceExists(named); err != nil {
+			return "", err
+		}
 		return named, nil
 	}
 	return currentWorkspaceName()
+}
+
+// checkWorkspaceName: a workspace is one plain folder under workspaces/.
+func checkWorkspaceName(name string) error {
+	if js.Trim(name) == "" {
+		return errors.New("a workspace needs a name")
+	}
+	if name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
+		return fmt.Errorf("not a workspace name: %s — use a plain name, without / or \\", name)
+	}
+	return nil
 }
 
 func targetWorkspace(named string) (string, error) {

@@ -1236,3 +1236,104 @@ func TestUpdateApplyUpToDate(t *testing.T) {
 }
 
 func nowMillis() int64 { return time.Now().UnixMilli() }
+
+// ── input validation ─────────────────────────────────────────────────────────
+
+// A write the schema would refuse on read must be refused up front, or every
+// later listing of the workspace fails.
+
+func TestSetTitleRefusesBlank(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dog")
+	taskthing(t, home, "list")
+	for _, blank := range [][]string{{"1"}, {"1", ""}, {"1", "   "}} {
+		r := taskthing(t, home, "set title", blank...)
+		mustCode(t, r, 1)
+		matches(t, r.stderr, `(?i)title`)
+	}
+	equal(t, title(tasks(t, home)[0]), "walk the dog")
+	mustCode(t, taskthing(t, home, "list"), 0)
+}
+
+func TestBoardSetNameRefusesBlank(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "board add", "work")
+	for _, blank := range [][]string{{"work"}, {"work", ""}, {"work", "   "}} {
+		r := taskthing(t, home, "board set name", blank...)
+		mustCode(t, r, 1)
+		matches(t, r.stderr, `(?i)name`)
+	}
+	equal(t, get(readAll(t, "board", home)[0], "name"), any("work"))
+	mustCode(t, taskthing(t, home, "boards"), 0)
+	mustCode(t, taskthing(t, home, "list"), 0)
+}
+
+func TestWorkspaceCreateRefusesBadNames(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	for _, bad := range [][]string{{}, {""}, {"   "}, {"."}, {".."}, {"../escape"}, {"a/b"}, {`a\b`}} {
+		r := taskthing(t, home, "workspace create", bad...)
+		mustCode(t, r, 1)
+	}
+	if _, err := os.Stat(filepath.Join(home, "escape")); err == nil {
+		t.Error("workspace created outside the workspaces folder")
+	}
+	if _, err := os.Stat(filepath.Join(home, "workspaces", "a")); err == nil {
+		t.Error("nested workspace folder created")
+	}
+	exists := taskthing(t, home, "workspace create", "main")
+	mustCode(t, exists, 1)
+	matches(t, exists.stderr, `(?i)already exists`)
+	listed := taskthing(t, home, "workspace list").stdout
+	equal(t, strings.Count(listed, "main"), 1)
+}
+
+func TestWorkspaceRenameRefusesBadNames(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "workspace create", "work")
+	for _, bad := range []string{"", "   ", "..", "../out", "a/b"} {
+		mustCode(t, taskthing(t, home, "workspace rename", "work", bad), 1)
+	}
+	mustCode(t, taskthing(t, home, "workspace rename", "work"), 1)
+	if _, err := os.Stat(filepath.Join(home, "out")); err == nil {
+		t.Error("workspace moved outside the workspaces folder")
+	}
+	taken := taskthing(t, home, "workspace rename", "work", "main")
+	mustCode(t, taken, 1)
+	matches(t, taken.stderr, `(?i)already exists`)
+	listed := taskthing(t, home, "workspace list").stdout
+	contains(t, listed, "work")
+	contains(t, listed, "main")
+}
+
+func TestWorkspaceFlagRefusesUnknown(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	for _, cmd := range [][]string{
+		{"add", "a typo"}, {"list"}, {"boards"}, {"board add", "work"}, {"check", "1"},
+	} {
+		r := taskthing(t, home, cmd[0], append(cmd[1:], "--workspace=nope")...)
+		mustCode(t, r, 1)
+		matches(t, r.stdout+r.stderr, `no such workspace: nope`)
+	}
+	if _, err := os.Stat(filepath.Join(home, "workspaces", "nope")); err == nil {
+		t.Error("a mistyped --workspace created a workspace")
+	}
+}
+
+func TestConfigSetRefusesBadTheme(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	for _, bad := range []string{"garbage", "[]", `{"success":99}`, `{"success":-1}`, `{"nope":1}`, `{"success":"red"}`} {
+		r := taskthing(t, home, "config set", "theme", bad)
+		mustCode(t, r, 1)
+		matches(t, r.stderr, `(?i)theme`)
+	}
+	lacks(t, taskthing(t, home, "config").stdout, "garbage")
+	mustCode(t, taskthing(t, home, "config set", "theme", `{"success":2}`), 0)
+	contains(t, taskthing(t, home, "config").stdout, `"success":2`)
+	mustCode(t, taskthing(t, home, "config set", "theme", ""), 0)
+}
