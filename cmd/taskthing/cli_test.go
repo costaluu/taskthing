@@ -1451,3 +1451,46 @@ func TestRemoteAddSurfacesGitReason(t *testing.T) {
 	// git's own reason names the path; its wording depends on the locale.
 	matches(t, r.stdout+r.stderr, `fatal: .*not-a-repo`)
 }
+
+func TestEntityRefusesPathNames(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	for _, cmd := range [][]string{
+		{"entity create", "../x"}, {"entity create", "a/b"}, {"entity create", ".."}, {"entity create", "   "},
+		{"entity rename", "list", "../y"}, {"entity rename", "../x", "list"}, {"entity rename", "list", "  "},
+		{"entity delete", ".."},
+	} {
+		r := taskthing(t, home, cmd[0], append(cmd[1:], "--log")...)
+		readable(t, r, `(?i)name`)
+		equal(t, r.stdout, "")
+	}
+}
+
+func TestRepeatedReferenceActsOnce(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	seedTask(t, home, js.Obj("title", "water plants", "rrule", "DTSTART:20260701T090000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO"))
+	taskthing(t, home, "list")
+	r := taskthing(t, home, "check", "1", "1", " 1 ")
+	mustCode(t, r, 0)
+	equal(t, strings.Count(r.stdout, "completed"), 1)
+	// One completion mints one next occurrence, not one per repetition.
+	equal(t, len(tasks(t, home)), 2)
+}
+
+func TestOptionNeedsAValue(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dog")
+	for _, cmd := range [][]string{
+		{"list", "--period"}, {"list", "--in-board"}, {"list", "--workspace"},
+		{"board add", "work", "--icon"}, {"truncate", "--keep", "1", "--branch"},
+	} {
+		readable(t, taskthing(t, home, cmd[0], cmd[1:]...), `(?i)needs a value`)
+	}
+	equal(t, len(readAll(t, "board", home)), 0)
+	readable(t, taskthing(t, home, "truncate", "--keep", "1", "--branch", ""), `(?i)branch`)
+	readable(t, taskthing(t, home, "truncate", "--keep", "1", "--branch", "  "), `(?i)branch`)
+	// A flag still needs nothing.
+	mustCode(t, taskthing(t, home, "list", "--checked"), 0)
+}

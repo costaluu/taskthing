@@ -242,6 +242,11 @@ func parseArgs(args []string, options []Option, command string, strict bool) (ma
 	unknown := func(arg string) error {
 		return &ValidationError{Message: fmt.Sprintf("Unknown option '%s' — see `--help` for this command's options, or put `--` before text that starts with -", arg), Command: command, Option: strings.TrimLeft(arg, "-")}
 	}
+	// An option that takes a value but got none would read as absent and
+	// quietly fall back to its default.
+	needsValue := func(arg string) error {
+		return &ValidationError{Message: fmt.Sprintf("Option '%s' needs a value", arg), Command: command, Option: strings.TrimLeft(arg, "-")}
+	}
 	flags := map[string]any{}
 	var positional []string
 	stop := false
@@ -288,6 +293,9 @@ func parseArgs(args []string, options []Option, command string, strict bool) (ma
 				t := "true"
 				value = &t
 			}
+			if value == nil && strict {
+				return nil, nil, needsValue(arg)
+			}
 			v, err := validateOption(o, value, command)
 			if err != nil {
 				return nil, nil, err
@@ -316,6 +324,9 @@ func parseArgs(args []string, options []Option, command string, strict bool) (ma
 			if value == nil && o.Flag {
 				t := "true"
 				value = &t
+			}
+			if value == nil && strict {
+				return nil, nil, needsValue(arg)
 			}
 			v, err := validateOption(o, value, command)
 			if err != nil {

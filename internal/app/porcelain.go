@@ -78,12 +78,15 @@ func targetWorkspaceName(named string) (string, error) {
 }
 
 // checkWorkspaceName: a workspace is one plain folder under workspaces/.
-func checkWorkspaceName(name string) error {
+func checkWorkspaceName(name string) error { return checkFolderName("workspace", name) }
+
+// checkFolderName: a name that becomes one folder, never a path out of it.
+func checkFolderName(noun, name string) error {
 	if js.Trim(name) == "" {
-		return errors.New("a workspace needs a name")
+		return fmt.Errorf("a %s needs a name", noun)
 	}
 	if name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
-		return fmt.Errorf("not a workspace name: %s — use a plain name, without / or \\", name)
+		return fmt.Errorf("not a %s name: %s — use a plain name, without / or \\", noun, name)
 	}
 	return nil
 }
@@ -229,7 +232,15 @@ func eachReference(positional []string, run func(reference string) error) error 
 	if len(refs) == 0 {
 		refs = []string{""}
 	}
+	// The same reference typed twice acts once: completing a recurring task
+	// twice would mint two next occurrences.
+	seen := map[string]bool{}
 	for _, r := range refs {
+		key := js.Trim(r)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		if err := run(r); err != nil {
 			return err
 		}
@@ -650,6 +661,13 @@ func runAllMigrations() error {
 // authorEntityLog runs a folder op against a throwaway workspace in logging
 // mode and returns the log line(s) it wrote — a dev-time authoring tool.
 func authorEntityLog(op, name string, newName *string) (string, error) {
+	for _, n := range []*string{&name, newName} {
+		if n != nil {
+			if err := checkFolderName("entity", *n); err != nil {
+				return "", err
+			}
+		}
+	}
 	author, err := resolveGitAuthor()
 	if err != nil {
 		return "", err

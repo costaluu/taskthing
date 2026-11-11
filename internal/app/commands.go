@@ -823,6 +823,9 @@ func truncateCommand() *Command {
 		Handler: func(c *Ctx) error {
 			var branch *string
 			if b, ok := c.Str("branch"); ok {
+				if js.Trim(b) == "" {
+					return errors.New("--branch needs a name — your own peer branch, or master")
+				}
 				branch = &b
 			}
 			keep, _ := c.Flags["keep"].(int)
