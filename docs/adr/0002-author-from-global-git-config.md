@@ -1,3 +1,7 @@
 # Autoria de mudanças vem da configuração global do git
 
 Todo campo controlado por LWW carrega o nome de quem fez a última mudança, mesmo em workspaces locais (sem repositório git). Consideramos usar uma identidade própria do taskthing (configurada em `config.md`), mas decidimos reaproveitar o `user.name` da configuração global do git da máquina — mesmo para workspaces locais que não são repositórios git. Isso implica que taskthing depende de o usuário ter o git instalado e configurado globalmente, mesmo para uso puramente local sem nenhum remoto.
+
+## Atualização: um peer por máquina
+
+O autor é também o peer: dá nome à branch `users/<peer>` e à chave `note[peer]` do purge. Como o purge só é seguro com um único relógio monotônico por peer (ADR-0006), duas máquinas não podem compartilhar um peer — e com o `user.name` global, duas máquinas da mesma pessoa compartilhariam. Por isso o autor de um workspace remoto passa a ser o `user.name` **local** do repositório do workspace (gravado pelo `remote add`), com o global como fallback. `workspace remote add --peer <nome>` escolhe esse nome; sem `--peer`, usa o global, mas recusa assumir uma branch `users/<nome>` que já existe no remoto — retomar o próprio peer (pasta perdida, `remote remove` + `add`) exige dizê-lo explicitamente com `--peer <nome>`. O nome é fixo depois da associação: trocar o `user.name` local depois aponta para outra branch.

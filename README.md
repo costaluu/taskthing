@@ -115,7 +115,7 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | `workspace list` (or the `workspaces` shortcut) | List your workspaces                                                      |
 | `use <name>` (alias for `workspace use`)        | Switch the current workspace                                              |
 | `workspace create\|rename\|delete <name>`       | Manage workspaces (`delete` is confirmed and can't remove the active one) |
-| `workspace remote add <url>`                    | Associate a git remote (makes the workspace remote)                       |
+| `workspace remote add <url> [--peer <name>]`    | Associate a git remote; `--peer` names this machine (one per machine)     |
 | `workspace remote remove`                       | Detach the remote (remote content is preserved)                           |
 
 ### Sync (git manager)

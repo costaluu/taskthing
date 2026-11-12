@@ -120,7 +120,7 @@ func nowNanos() int64 { return time.Now().UnixMilli() * 1_000_000 }
 // openWorkspace opens a workspace's engine and manager: the workspace is
 // remote exactly while its repository has a remote.
 func openWorkspace(root string) (*mdwal.Mdwal, *manager, error) {
-	author, err := resolveGitAuthor()
+	author, err := resolveGitAuthor(root)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -140,7 +140,7 @@ func openWorkspace(root string) (*mdwal.Mdwal, *manager, error) {
 			return "local", nil
 		},
 		Clock:      clock,
-		Author:     func() string { return author },
+		Author:     func() string { return mgr.author() },
 		Version:    Version,
 		Transforms: Transforms,
 	})
@@ -625,7 +625,7 @@ func recordedMigrations(root string) ([]string, map[string]bool) {
 }
 
 func runAllMigrations() error {
-	author, err := resolveGitAuthor()
+	author, err := resolveGitAuthor("")
 	if err != nil {
 		return err
 	}
@@ -668,7 +668,7 @@ func authorEntityLog(op, name string, newName *string) (string, error) {
 			}
 		}
 	}
-	author, err := resolveGitAuthor()
+	author, err := resolveGitAuthor("")
 	if err != nil {
 		return "", err
 	}

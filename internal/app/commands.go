@@ -743,7 +743,8 @@ func workspaceCommand() *Command {
 				Handler: rejectUnknownSubcommand(func(v string) string { return "unknown remote command: " + v }),
 				Commands: []*Command{
 					{Name: "add", Description: "attach a git remote by URL",
-						Options: []Option{confirm("confirm destroying local work to join the remote"), workspaceOption()},
+						Options: []Option{confirm("confirm destroying local work to join the remote"),
+							{Name: "peer", Description: "the name this machine joins as (default: your git user.name)", Kind: String}, workspaceOption()},
 						Handler: func(c *Ctx) error {
 							return reportWorkspace("add this remote", func(*js.Object) (entityOutcome, error) {
 								if len(c.Positional) == 0 {
@@ -758,7 +759,11 @@ func workspaceCommand() *Command {
 								if err != nil {
 									return entityOutcome{}, err
 								}
-								if err := mgr.init(url, c.Bool("confirm")); err != nil {
+								var peer *string
+								if p, ok := c.Str("peer"); ok {
+									peer = &p
+								}
+								if err := mgr.init(url, c.Bool("confirm"), peer); err != nil {
 									return entityOutcome{}, err
 								}
 								return entityOutcome{name: name, predicate: "remote added", value: &valueChip{": ", url}}, nil

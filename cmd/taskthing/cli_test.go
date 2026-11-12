@@ -1066,6 +1066,82 @@ func TestRemoteAddRemove(t *testing.T) {
 	equal(t, len(parseLog(t, home)), 0)
 }
 
+// peerOf is the peer a data home joined as: its branch under users/.
+func peerOf(t *testing.T, repo string) string {
+	t.Helper()
+	return strings.TrimPrefix(branches(t, repo, "refs/heads/users")[0], "users/")
+}
+
+func TestRemoteAddTakenPeerNeedsPeerFlag(t *testing.T) {
+	t.Parallel()
+	repo := remote(t)
+	associate(t, dataHome(t), repo)
+	r := taskthing(t, dataHome(t), "workspace remote add", repo)
+	mustCode(t, r, 1)
+	matches(t, r.stderr, `--peer`)
+}
+
+func TestRemoteRejoinAfterLostFolder(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	repo := remote(t)
+	associate(t, home, repo)
+	taskthing(t, home, "add", "kept on the remote")
+	mustCode(t, taskthing(t, home, "sync"), 0)
+
+	ws := filepath.Join(home, "workspaces", "main")
+	os.RemoveAll(ws)
+	os.MkdirAll(ws, 0o755)
+	mustCode(t, taskthing(t, home, "workspace remote add", repo, "--peer", peerOf(t, repo)), 0)
+	equal(t, title(tasks(t, home)[0]), "kept on the remote")
+	mustCode(t, taskthing(t, home, "sync"), 0)
+}
+
+func TestRemoteReaddAfterRemove(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	repo := remote(t)
+	associate(t, home, repo)
+	taskthing(t, home, "add", "kept on the remote")
+	mustCode(t, taskthing(t, home, "sync"), 0)
+
+	mustCode(t, taskthing(t, home, "workspace remote remove"), 0)
+	mustCode(t, taskthing(t, home, "workspace remote add", repo, "--peer", peerOf(t, repo), "--confirm"), 0)
+	equal(t, title(tasks(t, home)[0]), "kept on the remote")
+	taskthing(t, home, "add", "after rejoining")
+	mustCode(t, taskthing(t, home, "sync"), 0)
+}
+
+func TestTwoMachinesOneIdentity(t *testing.T) {
+	t.Parallel()
+	repo := remote(t)
+	first, second := dataHome(t), dataHome(t)
+	associate(t, first, repo)
+	mustCode(t, taskthing(t, second, "workspace remote add", repo, "--peer", "notebook-2"), 0)
+
+	taskthing(t, first, "add", "from the first")
+	taskthing(t, second, "add", "from the second")
+	mustCode(t, taskthing(t, first, "sync"), 0)
+	mustCode(t, taskthing(t, second, "sync"), 0)
+	equal(t, parseLog(t, second)[0].Payload.Value("author"), any("notebook-2"))
+
+	mustCode(t, taskthing(t, first, "rebuild"), 0)
+	mustCode(t, taskthing(t, second, "pull"), 0)
+	var titles []string
+	for _, task := range tasks(t, second) {
+		titles = append(titles, title(task))
+	}
+	equal(t, sorted(titles...), "from the first,from the second")
+}
+
+func TestRemoteAddRefusesBadPeer(t *testing.T) {
+	t.Parallel()
+	for _, peer := range []string{"two words", "../up", "a..b", ""} {
+		r := taskthing(t, dataHome(t), "workspace remote add", remote(t), "--peer", peer)
+		mustCode(t, r, 1)
+	}
+}
+
 func TestSyncAndPull(t *testing.T) {
 	t.Parallel()
 	home := dataHome(t)

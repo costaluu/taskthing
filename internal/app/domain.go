@@ -51,8 +51,15 @@ func monotonicClock(now func() int64, seed int64) func() int64 {
 
 // ── author (ADR-0002) ────────────────────────────────────────────────────────
 
-// resolveGitAuthor is the global git user.name; unset is a hard error.
-func resolveGitAuthor() (string, error) {
+// resolveGitAuthor is root's own git user.name (a remote workspace's peer),
+// else the global one; unset is a hard error.
+func resolveGitAuthor(root string) (string, error) {
+	if root != "" {
+		out, _ := exec.Command("git", "-C", root, "config", "--local", "user.name").Output()
+		if name := strings.TrimSpace(string(out)); name != "" {
+			return name, nil
+		}
+	}
 	out, err := exec.Command("git", "config", "--global", "user.name").Output()
 	name := strings.TrimSpace(string(out))
 	if err != nil || name == "" {

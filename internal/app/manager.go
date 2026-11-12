@@ -535,7 +535,19 @@ func (g *manager) rebuild() error {
 	return g.sync()
 }
 
-func (g *manager) init(url string, confirmDestroy bool) error {
+// init associates the workspace with url as peer — nil means the git
+// identity, which may not take over a peer that already exists remotely.
+func (g *manager) init(url string, confirmDestroy bool, peer *string) error {
+	if peer != nil {
+		name := *peer
+		if err := checkFolderName("peer", name); err != nil {
+			return err
+		}
+		if _, err := g.run(gitRun{}, "git", "check-ref-format", "refs/heads/users/"+name); err != nil {
+			return fmt.Errorf("not a peer name: %s", name)
+		}
+		g.author = func() string { return name }
+	}
 	author := g.author()
 	branches, err := g.remoteBranches(url)
 	if err != nil {
@@ -552,6 +564,9 @@ func (g *manager) init(url string, confirmDestroy bool) error {
 		}
 	}
 	rejoining := slices.Contains(branches, g.userBranch())
+	if rejoining && peer == nil {
+		return fmt.Errorf("%s already exists on the remote: pass --peer <name> to join as another machine, or --peer %s to take this one back", g.userBranch(), author)
+	}
 	if rejoining && hasLocalWork && !confirmDestroy {
 		return fmt.Errorf("%s already exists on the remote and this workspace has local work; confirm that the local tasks may be destroyed to continue", g.userBranch())
 	}
@@ -585,10 +600,11 @@ func (g *manager) init(url string, confirmDestroy bool) error {
 			}
 		}
 		os.Remove(filepath.Join(g.root, "events.log"))
+		os.Remove(filepath.Join(g.root, seenMasterFile))
 		if _, err := g.git("fetch", "origin", "+refs/heads/"+g.userBranch()+":refs/remotes/origin/"+g.userBranch()); err != nil {
 			return err
 		}
-		if _, err := g.git("checkout", "-b", g.userBranch(), "origin/"+g.userBranch()); err != nil {
+		if _, err := g.git("checkout", "-f", "-B", g.userBranch(), "origin/"+g.userBranch()); err != nil {
 			return err
 		}
 	} else {
