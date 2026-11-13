@@ -34,6 +34,10 @@ taskthing install
 
 `taskthing install` scaffolds `~/.config/taskthing/` with a local workspace and asks two quick questions: your date format (american `yyyy/mm/dd` or europe `dd/mm/yyyy`) and whether your terminal has [Nerd Font](https://www.nerdfonts.com/) glyphs.
 
+**Shell completion (bash, zsh).** `taskthing install` offers to turn it on; if you installed before completion existed, taskthing asks once on your next run. Either way it adds one line to `~/.bashrc` (`~/.bash_profile` on macOS) or `~/.zshrc`, which loads the script from the binary, so it keeps up with updates. No bash-completion package needed. To do it yourself: `taskthing completion install`.
+
+TAB completes commands, flags (`--opt value` and `--opt=value`), boards, workspaces, config values, `--peer` (peers already on the remote) and `--branch`, and tasks by the number your last `taskthing list` showed. Type part of a title instead (`taskthing check milk<TAB>`) and it becomes that task's number. In zsh, quote an `add` tag (`'b:[wor<TAB>`): zsh reads an unquoted `[` as a glob.
+
 ---
 
 ## Quick start

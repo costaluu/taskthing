@@ -64,4 +64,4 @@ case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *) echo "taskthing: add ${BIN_DIR} to your PATH, then restart your shell" >&2 ;;
 esac
-echo "taskthing: now run \`taskthing install\`"
+echo "taskthing: now run \`taskthing install\` (it also offers TAB completion)"

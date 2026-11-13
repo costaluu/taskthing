@@ -14,7 +14,7 @@ import (
 )
 
 func workspaceOption() Option {
-	return Option{Name: "workspace", Description: "the workspace to act on (default: the current one)", Kind: String}
+	return Option{Name: "workspace", Description: "the workspace to act on (default: the current one)", Kind: String, Complete: workspaceValue}
 }
 
 func flag(name, description string) Option {
@@ -47,13 +47,13 @@ func BuildCLI() *CLI {
 	cli := NewCLI("taskthing", Version, "a git-based task manager")
 	for _, cmd := range []*Command{
 		addCommand(), listCommand(),
-		taskVerb("check", "complete a task", func(ref, ws string) error { return completeTask(ref, true, ws) }),
-		taskVerb("uncheck", "reopen a task", func(ref, ws string) error { return completeTask(ref, false, ws) }),
-		taskVerb("star", "star a task", func(ref, ws string) error { return starTask(ref, true, ws) }),
-		taskVerb("unstar", "remove a task's star", func(ref, ws string) error { return starTask(ref, false, ws) }),
-		taskVerb("delete", "soft-delete a task", func(ref, ws string) error { return setTaskDeleted(ref, true, ws) }),
-		taskVerb("recover", "restore a deleted task", func(ref, ws string) error { return setTaskDeleted(ref, false, ws) }),
-		taskVerb("clear", "remove an already-deleted task from this machine", clearTask),
+		taskVerb("check", "complete a task", is("completed", false), func(ref, ws string) error { return completeTask(ref, true, ws) }),
+		taskVerb("uncheck", "reopen a task", is("completed", true), func(ref, ws string) error { return completeTask(ref, false, ws) }),
+		taskVerb("star", "star a task", is("star", false), func(ref, ws string) error { return starTask(ref, true, ws) }),
+		taskVerb("unstar", "remove a task's star", is("star", true), func(ref, ws string) error { return starTask(ref, false, ws) }),
+		taskVerb("delete", "soft-delete a task", isLive, func(ref, ws string) error { return setTaskDeleted(ref, true, ws) }),
+		taskVerb("recover", "restore a deleted task", isDeleted, func(ref, ws string) error { return setTaskDeleted(ref, false, ws) }),
+		taskVerb("clear", "remove an already-deleted task from this machine", isDeleted, clearTask),
 		setCommand(),
 		boardCommand(),
 		{Name: "boards", Description: "list boards (shortcut for `board list`)", Options: []Option{workspaceOption()},
@@ -62,6 +62,7 @@ func BuildCLI() *CLI {
 		{Name: "workspaces", Description: "list workspaces (shortcut for `workspace list`)",
 			Handler: func(*Ctx) error { return listWorkspaces() }},
 		{Name: "use", Description: "switch the current workspace (shortcut for `workspace use`)",
+			Args:    workspaceArg(true),
 			Handler: func(c *Ctx) error { return useWorkspace(first(c.Positional)) }},
 		syncVerb("sync", "publish this peer's events to the remote", syncCopy, func(m *manager) error { return m.sync() }),
 		syncVerb("pull", "replay peers' events into this workspace", pullCopy, func(m *manager) error { return m.pull() }),
@@ -73,6 +74,7 @@ func BuildCLI() *CLI {
 		migrationsCommand(),
 		installCommand(),
 		entityCommand(),
+		completionCommand(),
 	} {
 		cli.Register(cmd)
 	}
@@ -102,8 +104,8 @@ func onTask(verb, reference, workspace string, edit func(task *js.Object, tasks 
 	})
 }
 
-func taskVerb(name, description string, act func(ref, ws string) error) *Command {
-	return &Command{Name: name, Description: description, Options: []Option{workspaceOption()},
+func taskVerb(name, description string, keep func(*js.Object) bool, act func(ref, ws string) error) *Command {
+	return &Command{Name: name, Description: description, Options: []Option{workspaceOption()}, Args: taskRefs(keep, true),
 		Handler: func(c *Ctx) error {
 			return eachReference(c.Positional, func(ref string) error { return act(ref, workspaceFlag(c)) })
 		}}
@@ -184,7 +186,7 @@ func clearTask(reference, workspace string) error {
 }
 
 func addCommand() *Command {
-	return &Command{Name: "add", Description: "add a task (d:[…] date, r:[…] recurrence, b:[…] board)", Options: []Option{workspaceOption()},
+	return &Command{Name: "add", Description: "add a task (d:[…] date, r:[…] recurrence, b:[…] board)", Options: []Option{workspaceOption()}, Args: addArgs,
 		Handler: func(c *Ctx) error {
 			input := strings.Join(c.Positional, " ")
 			return reportTask("create", func(config *js.Object) (taskOutcome, error) {
@@ -238,7 +240,7 @@ func listCommand() *Command {
 			flag("starred", "only starred tasks"),
 			flag("hasDescription", "only tasks that carry a description"),
 			{Name: "period", Description: "only tasks due within a window, e.g. 2d, 3m, 1y", Kind: String},
-			{Name: "in-board", Description: "only tasks on a board (name, number or inbox)", Kind: String},
+			{Name: "in-board", Description: "only tasks on a board (name, number or inbox)", Kind: String, Complete: boardOrInbox},
 			workspaceOption(),
 		},
 		Handler: func(c *Ctx) error {
@@ -332,8 +334,8 @@ func editTask(positional []string, workspace string, edit func(value string, tas
 var taskFields = []string{"title", "description", "date-time", "board"}
 
 func setCommand() *Command {
-	field := func(name, description string, edit func(string, *js.Object, repository, *mdwal.Mdwal, string, *js.Object) (taskOutcome, error)) *Command {
-		return &Command{Name: name, Description: description, Options: []Option{workspaceOption()},
+	field := func(name, description string, value completer, edit func(string, *js.Object, repository, *mdwal.Mdwal, string, *js.Object) (taskOutcome, error)) *Command {
+		return &Command{Name: name, Description: description, Options: []Option{workspaceOption()}, Args: taskThen(value),
 			Handler: func(c *Ctx) error { return editTask(c.Positional, workspaceFlag(c), edit) }}
 	}
 	return &Command{Name: "set", Description: "edit a task field",
@@ -341,7 +343,7 @@ func setCommand() *Command {
 			return fmt.Sprintf("a task has no %s — try %s", f, strings.Join(taskFields, ", "))
 		}),
 		Commands: []*Command{
-			field("title", "retitle a task", func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
+			field("title", "retitle a task", currentValue("title", referencedTask), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
 				if js.Trim(value) == "" {
 					return taskOutcome{}, errors.New("a task needs a title — `set title <task> <new title>`")
 				}
@@ -350,13 +352,13 @@ func setCommand() *Command {
 				}
 				return taskOutcome{title: value, predicate: "title updated"}, nil
 			}),
-			field("description", "set a task's description", func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
+			field("description", "set a task's description", currentValue("description", referencedTask), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
 				if _, err := tasks.update(with(task, "description", value)); err != nil {
 					return taskOutcome{}, err
 				}
 				return taskOutcome{title: str(task, "title"), predicate: "description updated"}, nil
 			}),
-			field("date-time", "schedule a task, or clear its schedule with an empty value", func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, config *js.Object) (taskOutcome, error) {
+			field("date-time", "schedule a task, or clear its schedule with an empty value", nil, func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, config *js.Object) (taskOutcome, error) {
 				if value == "" {
 					if _, err := tasks.update(with(task, "rrule", nil)); err != nil {
 						return taskOutcome{}, err
@@ -376,7 +378,7 @@ func setCommand() *Command {
 				}
 				return datedOutcome(str(task, "title"), "schedule updated", &rule, config)
 			}),
-			field("board", "move a task to a board (name, number or inbox)", func(value string, task *js.Object, tasks repository, m *mdwal.Mdwal, root string, _ *js.Object) (taskOutcome, error) {
+			field("board", "move a task to a board (name, number or inbox)", boardOrInbox, func(value string, task *js.Object, tasks repository, m *mdwal.Mdwal, root string, _ *js.Object) (taskOutcome, error) {
 				boards := boardRepository(m)
 				boardID := mdwal.INBOX
 				if value != "" {
@@ -488,8 +490,8 @@ func assertBoardNameFree(boards repository, name, exceptID string) error {
 	return nil
 }
 
-func setBoardField(field, action, predicate, connector string) *Command {
-	return &Command{Name: field, Description: action, Options: []Option{workspaceOption()},
+func setBoardField(field, action, predicate, connector string, value completer) *Command {
+	return &Command{Name: field, Description: action, Options: []Option{workspaceOption()}, Args: boardThen(value),
 		Handler: func(c *Ctx) error {
 			reference := first(c.Positional)
 			var rest []string
@@ -556,12 +558,12 @@ func boardCommand() *Command {
 					return fmt.Sprintf("a board has no %s — try %s", f, strings.Join(boardFieldNames, ", "))
 				}),
 				Commands: []*Command{
-					setBoardField("name", "rename this board", "renamed", " to "),
-					setBoardField("icon", "update this board's icon", "icon updated", ": "),
-					setBoardField("color", "update this board's color", "color updated", ": "),
+					setBoardField("name", "rename this board", "renamed", " to ", currentValue("name", referencedBoard)),
+					setBoardField("icon", "update this board's icon", "icon updated", ": ", currentValue("icon", referencedBoard)),
+					setBoardField("color", "update this board's color", "color updated", ": ", func(_ *Ctx, cur string) []candidate { return byPrefix(cur, plain(inkColorNames...)) }),
 				}},
 			{Name: "delete", Description: "soft-delete a board, moving its tasks to the inbox",
-				Options: []Option{flag("tasks", "soft-delete the board's tasks instead of moving them to the inbox"), workspaceOption()},
+				Options: []Option{flag("tasks", "soft-delete the board's tasks instead of moving them to the inbox"), workspaceOption()}, Args: boardRefs(false, true),
 				Handler: func(c *Ctx) error {
 					return eachReference(c.Positional, func(ref string) error {
 						return onBoard("delete this board", ref, workspaceFlag(c), func(board *js.Object, boards repository, m *mdwal.Mdwal, _ string) (entityOutcome, error) {
@@ -601,7 +603,7 @@ func boardCommand() *Command {
 						})
 					})
 				}},
-			{Name: "clear", Description: "soft-delete every task of a board, keeping the board", Options: []Option{workspaceOption()},
+			{Name: "clear", Description: "soft-delete every task of a board, keeping the board", Options: []Option{workspaceOption()}, Args: boardRefs(false, true),
 				Handler: func(c *Ctx) error {
 					return eachReference(c.Positional, func(ref string) error {
 						return onBoard("clear this board", ref, workspaceFlag(c), func(board *js.Object, _ repository, m *mdwal.Mdwal, _ string) (entityOutcome, error) {
@@ -614,7 +616,7 @@ func boardCommand() *Command {
 						})
 					})
 				}},
-			{Name: "recover", Description: "restore a deleted board", Options: []Option{workspaceOption()},
+			{Name: "recover", Description: "restore a deleted board", Options: []Option{workspaceOption()}, Args: boardRefs(true, true),
 				Handler: func(c *Ctx) error {
 					return eachReference(c.Positional, func(ref string) error {
 						return onBoard("recover this board", ref, workspaceFlag(c), func(board *js.Object, boards repository, _ *mdwal.Mdwal, _ string) (entityOutcome, error) {
@@ -683,8 +685,8 @@ func workspaceCommand() *Command {
 					return entityOutcome{name: name, predicate: "created"}, nil
 				})
 			}},
-			{Name: "use", Description: "switch the current workspace", Handler: func(c *Ctx) error { return useWorkspace(first(c.Positional)) }},
-			{Name: "rename", Description: "rename a workspace", Handler: func(c *Ctx) error {
+			{Name: "use", Description: "switch the current workspace", Args: workspaceArg(true), Handler: func(c *Ctx) error { return useWorkspace(first(c.Positional)) }},
+			{Name: "rename", Description: "rename a workspace", Args: workspaceArg(false), Handler: func(c *Ctx) error {
 				name := first(c.Positional)
 				second := ""
 				if len(c.Positional) > 1 {
@@ -715,7 +717,7 @@ func workspaceCommand() *Command {
 					return entityOutcome{name: name, predicate: "renamed", value: &valueChip{" to ", second}}, nil
 				})
 			}},
-			{Name: "delete", Description: "delete a workspace's local folder",
+			{Name: "delete", Description: "delete a workspace's local folder", Args: workspaceArg(false),
 				Options: []Option{confirm("confirm that the local folder is removed")},
 				Handler: func(c *Ctx) error {
 					name := first(c.Positional)
@@ -744,7 +746,7 @@ func workspaceCommand() *Command {
 				Commands: []*Command{
 					{Name: "add", Description: "attach a git remote by URL",
 						Options: []Option{confirm("confirm destroying local work to join the remote"),
-							{Name: "peer", Description: "the name this machine joins as (default: your git user.name)", Kind: String}, workspaceOption()},
+							{Name: "peer", Description: "the name this machine joins as (default: your git user.name)", Kind: String, Complete: peerValue}, workspaceOption()},
 						Handler: func(c *Ctx) error {
 							return reportWorkspace("add this remote", func(*js.Object) (entityOutcome, error) {
 								if len(c.Positional) == 0 {
@@ -822,7 +824,7 @@ func truncateCommand() *Command {
 	return &Command{Name: "truncate", Description: "bound a branch's history to its most recent commits",
 		Options: []Option{
 			{Name: "keep", Description: "the number of commits to keep", Kind: PositiveInt},
-			{Name: "branch", Description: "the branch to truncate (default: this peer's own)", Kind: String},
+			{Name: "branch", Description: "the branch to truncate (default: this peer's own)", Kind: String, Complete: branchValue},
 			workspaceOption(),
 		},
 		Handler: func(c *Ctx) error {
@@ -880,7 +882,7 @@ func configCommand() *Command {
 				return writeConfig(parsed)
 			})
 		},
-		Commands: []*Command{{Name: "set", Description: "set a setting non-interactively", Handler: func(c *Ctx) error {
+		Commands: []*Command{{Name: "set", Description: "set a setting non-interactively", Args: configArgs, Handler: func(c *Ctx) error {
 			key := first(c.Positional)
 			value := ""
 			if len(c.Positional) > 1 {
@@ -1077,6 +1079,7 @@ func installCommand() *Command {
 				return present.fail("something went wrong during installation. error: "+summarize(err), config)
 			}
 			consoleLog(createGlyphs(nerdfont).success + " taskthing installed successfully!")
+			offerCompletion()
 			return nil
 		}}
 }

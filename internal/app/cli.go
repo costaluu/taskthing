@@ -39,6 +39,7 @@ type Option struct {
 	Flag        bool // argumentKind: "flag"
 	Kind        OptionKind
 	Values      []string
+	Complete    completer // the option's value, past Values
 }
 
 // expectedType is extractSchemaType: the zod schema's `type`.
@@ -58,6 +59,7 @@ type Command struct {
 	Options     []Option
 	Commands    []*Command
 	Handler     func(ctx *Ctx) error
+	Args        completer // the next positional; Ctx.Positional is what came before
 }
 
 // Ctx is what a handler receives.
