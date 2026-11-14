@@ -137,3 +137,50 @@ func TestGoldenConfig(t *testing.T) {
 		t.Error("config does not round-trip")
 	}
 }
+
+// IsID is the shape the command line reads an argument as a reference.
+func TestIsID(t *testing.T) {
+	cases := []struct {
+		s    string
+		want bool
+	}{
+		{"useandom26T198340PX75", true},
+		{"-useandom26T198340PX7", true}, // the alphabet holds a dash
+		{"inbox", false},
+		{"useandom26T198340PX7", false},   // 20
+		{"useandom26T198340PX755", false}, // 22
+		{"useandom26T198340PX7!", false},  // 21 bytes, one outside the alphabet
+		{"useandom26 198340PX7", false},
+	}
+	for _, c := range cases {
+		if got := IsID(c.s); got != c.want {
+			t.Errorf("IsID(%q) = %v, want %v", c.s, got, c.want)
+		}
+	}
+}
+
+// A generated id is a file name and a command-line reference: one starting
+// with a dash would read as an option, so the generator asks for another.
+func TestNewIDSkipsDashAndInbox(t *testing.T) {
+	root := t.TempDir()
+	ids := []string{"-useandom26T198340PX7", INBOX, "useandom26T198340PX75"}
+	m := New(Config{
+		Root:    root,
+		Schemas: []SchemaEntry{{"task", TaskFields}},
+		Mode:    func() (string, error) { return "local", nil },
+		Clock:   func() int64 { return 1 },
+		Author:  func() string { return "test" },
+		IDs: func() string {
+			if len(ids) == 0 {
+				t.Fatal("the generator ran out of ids: the rejected ones were not skipped")
+			}
+			id := ids[0]
+			ids = ids[1:]
+			return id
+		},
+	})
+	created := must(m.CreateEntity("task", js.Obj("title", "x"), nil))
+	if got := created.Value("id"); got != "useandom26T198340PX75" {
+		t.Errorf("id = %v, want useandom26T198340PX75", got)
+	}
+}

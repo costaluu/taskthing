@@ -108,13 +108,30 @@ func Nanoid() string {
 	return string(id)
 }
 
+// IsID reports whether s has the shape of an id: 21 characters of the nanoid
+// alphabet. The alphabet holds `-`, so an id can start with one, and the
+// command line has to tell such an id from a mistyped option.
+func IsID(s string) bool {
+	if len(s) != 21 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if strings.IndexByte(nanoidAlphabet, s[i]) < 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *Mdwal) newID() string {
 	gen := m.cfg.IDs
 	if gen == nil {
 		gen = Nanoid
 	}
 	id := gen()
-	for id == INBOX {
+	// A dash-leading id would read as an option on the command line; the
+	// alphabet has enough letters without one.
+	for id == INBOX || strings.HasPrefix(id, "-") {
 		id = gen()
 	}
 	return id

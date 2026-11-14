@@ -1,6 +1,6 @@
 # Plano: ids que começam com `-` e sugestão de emoji para boards
 
-Escrito em 2026-11-14, na branch `autocomplete` (HEAD `afc2b76`). Nada aqui está implementado. São três frentes independentes, na ordem em que eu as faria:
+Escrito em 2026-11-14, na branch `autocomplete` (HEAD `afc2b76`). Frente 1 implementada na branch `dash-ids` em 2026-11-14; as frentes 2 e 3 não estão implementadas. São três frentes independentes, na ordem em que eu as faria:
 
 1. Ids que começam com `-` (corrige um defeito real e um teste instável).
 2. Sugestão de emoji por palavras-chave do Unicode (CLDR).

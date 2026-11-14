@@ -1845,3 +1845,79 @@ func TestViewNumbersAndFilters(t *testing.T) {
 	// A view shows open tasks only: it has no --checked or --deleted.
 	readable(t, taskthing(t, home, "today", "--checked"), `(?i)unknown option`)
 }
+
+// ── ids that start with - ────────────────────────────────────────────────────
+
+// dashID is an id the generator no longer hands out: 21 characters of the
+// nanoid alphabet, starting with '-'. Workspaces written by an older binary,
+// and peers still running one, carry ids like it.
+const dashID = "-useandom26T198340PX7"
+
+// seedAs creates an entity and renames its file to want, the way a workspace
+// an older peer wrote carries one: the generator itself will not mint it.
+func seedAs(t *testing.T, home, kind, want string, fields *js.Object) {
+	t.Helper()
+	created, err := workspaceMdwal(home).CreateEntity(kind, fields, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(home, "workspaces", "main", kind+"s")
+	if err := os.Rename(filepath.Join(dir, id(created)+".md"), filepath.Join(dir, want+".md")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Every verb that takes a reference reads a dash-leading id as one, not as a
+// mistyped option.
+func TestDashIDIsAReference(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		kind   string
+		fields *js.Object
+		path   string
+		args   []string
+	}{
+		{"check", "task", js.Obj("title", "one"), "check", []string{dashID}},
+		{"uncheck", "task", js.Obj("title", "one", "completed", true), "uncheck", []string{dashID}},
+		{"star", "task", js.Obj("title", "one"), "star", []string{dashID}},
+		{"unstar", "task", js.Obj("title", "one", "star", true), "unstar", []string{dashID}},
+		{"delete", "task", js.Obj("title", "one"), "delete", []string{dashID}},
+		{"recover", "task", js.Obj("title", "one", "deleted", true), "recover", []string{dashID}},
+		{"clear", "task", js.Obj("title", "one", "deleted", true), "clear", []string{dashID}},
+		{"set title", "task", js.Obj("title", "one"), "set title", []string{dashID, "renamed"}},
+		{"set description", "task", js.Obj("title", "one"), "set description", []string{dashID, "a note"}},
+		{"set date-time", "task", js.Obj("title", "one"), "set date-time", []string{dashID, "tomorrow"}},
+		{"set board", "task", js.Obj("title", "one"), "set board", []string{dashID, "inbox"}},
+		{"board delete", "board", js.Obj("name", "work"), "board delete", []string{dashID}},
+		{"board clear", "board", js.Obj("name", "work"), "board clear", []string{dashID}},
+		{"board recover", "board", js.Obj("name", "work", "deleted", true), "board recover", []string{dashID}},
+		{"board switch", "board", js.Obj("name", "work"), "board switch", []string{dashID, "inbox"}},
+		{"board set name", "board", js.Obj("name", "work"), "board set name", []string{dashID, "groceries"}},
+		{"board set icon", "board", js.Obj("name", "work"), "board set icon", []string{dashID, "x"}},
+		{"board set color", "board", js.Obj("name", "work"), "board set color", []string{dashID, "blue"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			home := dataHome(t)
+			seedAs(t, home, c.kind, dashID, c.fields)
+			mustCode(t, taskthing(t, home, c.path, c.args...), 0)
+		})
+	}
+}
+
+// The dash rule is the id's shape only: a mistyped option is still refused.
+func TestDashShapeDoesNotSwallowTypos(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	seedAs(t, home, "task", dashID, js.Obj("title", "one"))
+	for _, argv := range [][]string{
+		{"check", "-x"},
+		{"list", "-zz"},
+		{"check", "-!!!!!!!!!!!!!!!!!!!!"},       // 21 characters, one outside the alphabet
+		{"check", "-" + strings.Repeat("z", 21)}, // 22 characters
+	} {
+		readable(t, taskthing(t, home, argv[0], argv[1:]...), `(?i)unknown option`)
+	}
+}

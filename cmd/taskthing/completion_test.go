@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/costaluu/taskthing/internal/js"
 )
 
 // completionHome: two boards, three open tasks and a checked one, listed.
@@ -551,5 +553,65 @@ func TestCompleteDatesAndPeriods(t *testing.T) {
 		if strings.Join(got, "\n") != strings.Join(c.want, "\n") {
 			t.Errorf("complete %q\n got %q\nwant %q", c.words, got, c.want)
 		}
+	}
+}
+
+// A deleted board completes by its id, and an id can start with '-'. The
+// flags still come first for a bare '-'; references that only read as titles
+// or numbers are not offered under one.
+func TestCompleteDashID(t *testing.T) {
+	home := dataHome(t)
+	seedAs(t, home, "board", dashID, js.Obj("name", "groceries", "deleted", true))
+	mustCode(t, taskthing(t, home, "add", "buy milk"), 0)
+	mustCode(t, taskthing(t, home, "list"), 0)
+
+	got := complete(t, home, "board", "recover", "-useandom")
+	equal(t, strings.Join(got, "\n"), dashID+"\tgroceries")
+
+	got = complete(t, home, "board", "recover", "-")
+	want := "--workspace\tthe workspace to act on (default: the current one)\n--help\tShow help\n" + dashID + "\tgroceries"
+	equal(t, strings.Join(got, "\n"), want)
+
+	// check's references are numbers: nothing but flags under a dash.
+	got = complete(t, home, "check", "-")
+	want = "--workspace\tthe workspace to act on (default: the current one)\n--help\tShow help"
+	equal(t, strings.Join(got, "\n"), want)
+
+	// The id already typed is a positional, so it isn't offered again.
+	got = complete(t, home, "board", "recover", dashID, "")
+	equal(t, strings.Join(got, "\n"), "")
+}
+
+// TestShellsCompleteDashID: the shims carry a dash-leading id into the line,
+// and the line it produces runs. Each shell gets its own home, since the run
+// recovers the board the other would have completed.
+func TestShellsCompleteDashID(t *testing.T) {
+	if _, err := exec.LookPath("zsh"); err != nil {
+		t.Skip("no zsh")
+	}
+	for _, shell := range []string{"bash", "zsh"} {
+		if _, err := exec.LookPath(shell); err != nil {
+			continue
+		}
+		t.Run(shell, func(t *testing.T) {
+			home := dataHome(t)
+			seedAs(t, home, "board", dashID, js.Obj("name", "groceries", "deleted", true))
+			dir, env := zshEnv(t, home)
+			os.WriteFile(filepath.Join(dir, ".zshrc"), []byte(`eval "$(taskthing completion zsh)"
+dump() { print -r -- ""; print -r -- "LINE<<$BUFFER>>END" }
+zle -N dump; bindkey '^X^D' dump
+PROMPT=
+`), 0o644)
+			os.WriteFile(filepath.Join(dir, "rc.bash"), []byte(`eval "$(taskthing completion bash)"
+bind -x '"\C-x\C-d": echo "LINE<<$READLINE_LINE>>END"'
+PS1=
+`), 0o644)
+			line := editedLine(t, shell, env, "taskthing board recover -useandom\t")
+			want := "taskthing board recover " + dashID + " "
+			if line != want {
+				t.Fatalf("got %q\nwant %q", line, want)
+			}
+			mustCode(t, taskthing(t, home, strings.TrimSpace(strings.TrimPrefix(line, "taskthing "))), 0)
+		})
 	}
 }

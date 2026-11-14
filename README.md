@@ -86,6 +86,8 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 
 `--workspace=<name>` is accepted almost everywhere and defaults to your current workspace. `<id>` is the ephemeral number from the last `list`.
 
+A full id works wherever a number does, including one that starts with a `-` (the nanoid alphabet has one; the generator no longer mints them, but workspaces and peers written before it carry them). Only an id starting with `--` still needs `--` before it, since it would read as a long option.
+
 ### Tasks
 
 | Command                        | What it does                                                                   |

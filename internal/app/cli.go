@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/costaluu/taskthing/internal/js"
+	"github.com/costaluu/taskthing/internal/mdwal"
 )
 
 // ── the command-line surface (what Bunli did for the TS binary) ─────────────
@@ -313,6 +314,14 @@ func parseArgs(args []string, options []Option, command string, strict bool) (ma
 				}
 			}
 			if !found {
+				// An id is 21 characters of the nanoid alphabet, which
+				// includes `-`: one that starts with a dash is a positional,
+				// not a mistyped option. `--` still works for the rarer ids
+				// that start with two.
+				if mdwal.IsID(arg) {
+					positional = append(positional, arg)
+					continue
+				}
 				if strict {
 					return nil, nil, unknown(arg)
 				}

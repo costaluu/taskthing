@@ -138,7 +138,17 @@ func (c *CLI) complete(words []string) []candidate {
 				out = append(out, candidate{value: "--" + o.Name, desc: o.Description})
 			}
 		}
-		return byPrefix(cur, append(out, candidate{value: "--help", desc: "Show help"}))
+		out = append(out, candidate{value: "--help", desc: "Show help"})
+		// An id can start with '-', and a deleted board is completed by its
+		// id: offer the references that extend what's typed beside the flags.
+		if cmd.Args != nil {
+			for _, c := range cmd.Args(ctx, cur) {
+				if strings.HasPrefix(c.value, cur) {
+					out = append(out, c)
+				}
+			}
+		}
+		return byPrefix(cur, out)
 	}
 	var out []candidate
 	if len(positional) == 0 {
