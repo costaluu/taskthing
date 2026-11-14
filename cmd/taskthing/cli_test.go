@@ -1570,3 +1570,87 @@ func TestOptionNeedsAValue(t *testing.T) {
 	// A flag still needs nothing.
 	mustCode(t, taskthing(t, home, "list", "--checked"), 0)
 }
+
+// ── views ────────────────────────────────────────────────────────────────────
+
+// viewHome holds one open task per day around now (2026-07-22), an undated
+// one, and a completed and a deleted one dated today.
+func viewHome(t *testing.T) string {
+	t.Helper()
+	home := dataHome(t)
+	for title, rule := range map[string]any{
+		"last week": "DTSTART:20260715T090000Z", "yesterday": "DTSTART:20260721T230000Z",
+		"this morning": "DTSTART:20260722T000000Z", "tonight": "DTSTART:20260722T235900Z",
+		"tomorrow": "DTSTART:20260723T000000Z", "in six days": "DTSTART:20260728T235900Z",
+		"in seven days": "DTSTART:20260729T000000Z", "next year": "DTSTART:20270722T090000Z",
+		"undated": nil,
+	} {
+		seedTask(t, home, js.Obj("title", title, "rrule", rule))
+	}
+	seedTask(t, home, js.Obj("title", "done today", "rrule", "DTSTART:20260722T090000Z", "completed", true))
+	seedTask(t, home, js.Obj("title", "binned today", "rrule", "DTSTART:20260722T090000Z", "deleted", true))
+	return home
+}
+
+// titles are a listing's titles, sorted.
+func titles(listing string) string {
+	var out []string
+	for _, line := range strings.Split(strings.TrimSpace(listing), "\n") {
+		if _, title, ok := strings.Cut(line, " "); ok {
+			out = append(out, title)
+		}
+	}
+	sort.Strings(out)
+	return strings.Join(out, "|")
+}
+
+func TestTodayView(t *testing.T) {
+	t.Parallel()
+	home := viewHome(t)
+	r := taskthing(t, home, "today")
+	mustCode(t, r, 0)
+	equal(t, titles(r.stdout), "this morning|tonight")
+}
+
+func TestOverdueView(t *testing.T) {
+	t.Parallel()
+	home := viewHome(t)
+	r := taskthing(t, home, "overdue")
+	mustCode(t, r, 0)
+	equal(t, titles(r.stdout), "last week|yesterday")
+}
+
+func TestUpcomingView(t *testing.T) {
+	t.Parallel()
+	home := viewHome(t)
+	r := taskthing(t, home, "upcoming")
+	mustCode(t, r, 0)
+	equal(t, titles(r.stdout), "in seven days|in six days|next year|tomorrow")
+}
+
+// week is today and the six days after it.
+func TestWeekView(t *testing.T) {
+	t.Parallel()
+	home := viewHome(t)
+	r := taskthing(t, home, "week")
+	mustCode(t, r, 0)
+	equal(t, titles(r.stdout), "in six days|this morning|tomorrow|tonight")
+}
+
+// A view is a listing: it hands out the numbers verbs act on, and takes
+// list's filters.
+func TestViewNumbersAndFilters(t *testing.T) {
+	t.Parallel()
+	home := viewHome(t)
+	taskthing(t, home, "board add", "work")
+	taskthing(t, home, "list")
+	taskthing(t, home, "set board", numberOf(taskthing(t, home, "list").stdout, "tonight"), "work")
+
+	mustCode(t, taskthing(t, home, "check", numberOf(taskthing(t, home, "today").stdout, "this morning")), 0)
+	equal(t, flag(byTitle(tasks(t, home), "this morning"), "completed"), true)
+	equal(t, titles(taskthing(t, home, "today").stdout), "tonight")
+	equal(t, titles(taskthing(t, home, "week", "--in-board=work").stdout), "tonight")
+	equal(t, titles(taskthing(t, home, "week", "--in-board=inbox").stdout), "in six days|tomorrow")
+	// A view shows open tasks only: it has no --checked or --deleted.
+	readable(t, taskthing(t, home, "today", "--checked"), `(?i)unknown option`)
+}

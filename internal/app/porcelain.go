@@ -288,6 +288,25 @@ func reportConfig(config *js.Object, key string, write func() error) error {
 type taskFilters struct {
 	checked, deleted, starred, hasDescription bool
 	period, inBoard                           *string
+	days                                      *dayWindow
+}
+
+// dayWindow bounds a view in calendar days from today (0), as the listing
+// buckets dates: nil leaves that side open. Undated tasks are never inside.
+type dayWindow struct{ from, to *int }
+
+var day0, day1, day6, dayBefore = 0, 1, 6, -1
+
+func (w dayWindow) holds(rule *string) (bool, error) {
+	if rule == nil {
+		return false, nil
+	}
+	r, err := rrule.FromString(*rule)
+	if err != nil {
+		return false, err
+	}
+	days := int(jsRound((utcMidnight(r.DtstartOf()) - utcMidnight(now())) / 86_400_000))
+	return (w.from == nil || days >= *w.from) && (w.to == nil || days <= *w.to), nil
 }
 
 var periodRe = regexp.MustCompile(`^(\d+)([dmy])$`)
@@ -378,6 +397,12 @@ func taskFilter(f taskFilters, inBoardID *string) func(*js.Object) (bool, error)
 		}
 		if f.period != nil {
 			ok, err := inPeriod(strPtr(task, "rrule"), *f.period)
+			if err != nil || !ok {
+				return false, err
+			}
+		}
+		if f.days != nil {
+			ok, err := f.days.holds(strPtr(task, "rrule"))
 			if err != nil || !ok {
 				return false, err
 			}

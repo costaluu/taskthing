@@ -47,6 +47,10 @@ func BuildCLI() *CLI {
 	cli := NewCLI("taskthing", Version, "a git-based task manager")
 	for _, cmd := range []*Command{
 		addCommand(), listCommand(),
+		viewCommand("today", "list the open tasks dated today", dayWindow{from: &day0, to: &day0}),
+		viewCommand("upcoming", "list the open tasks dated after today", dayWindow{from: &day1}),
+		viewCommand("overdue", "list the open tasks dated before today", dayWindow{to: &dayBefore}),
+		viewCommand("week", "list the open tasks dated today or in the six days after", dayWindow{from: &day0, to: &day6}),
 		taskVerb("check", "complete a task", is("completed", false), func(ref, ws string) error { return completeTask(ref, true, ws) }),
 		taskVerb("uncheck", "reopen a task", is("completed", true), func(ref, ws string) error { return completeTask(ref, false, ws) }),
 		taskVerb("star", "star a task", is("star", false), func(ref, ws string) error { return starTask(ref, true, ws) }),
@@ -243,80 +247,96 @@ func listCommand() *Command {
 			{Name: "in-board", Description: "only tasks on a board (name, number or inbox)", Kind: String, Complete: boardOrInbox},
 			workspaceOption(),
 		},
-		Handler: func(c *Ctx) error {
-			f := taskFilters{checked: c.Bool("checked"), deleted: c.Bool("deleted"), starred: c.Bool("starred"), hasDescription: c.Bool("hasDescription")}
-			if p, ok := c.Str("period"); ok {
-				f.period = &p
-			}
-			if b, ok := c.Str("in-board"); ok {
-				f.inBoard = &b
-			}
-			global := c.Bool("global")
-			var names []string
-			if global {
-				all, err := allWorkspaces()
-				if err != nil {
-					return err
-				}
-				names = all
-			} else {
-				name, err := targetWorkspaceName(workspaceFlag(c))
-				if err != nil {
-					return err
-				}
-				names = []string{name}
-			}
-			// Filters are checked before any numbering is reset, so a typo
-			// doesn't cost the numbers the last listing handed out.
-			if f.period != nil {
-				if _, err := periodEnd(*f.period, now()); err != nil {
-					return err
-				}
-			}
-			if f.inBoard != nil {
-				for _, n := range names {
-					m, _, err := openWorkspace(workspacePath(n))
-					if err != nil {
-						return err
-					}
-					if _, err := inBoardFilter(f, boardRepository(m), workspacePath(n)); err != nil {
-						return err
-					}
-				}
-			}
-			var store kvStore
-			if global {
-				store = globalKvStore(dataHome())
-			} else {
-				store = workspaceKvStore(workspacePath(names[0]), "tasks")
-			}
-			if err := store.reset(); err != nil {
-				return err
-			}
-			// Every numbering this listing replaces is cleared too.
-			if global {
-				for _, n := range names {
-					if err := workspaceKvStore(workspacePath(n), "tasks").reset(); err != nil {
-						return err
-					}
-				}
-			} else if err := globalKvStore(dataHome()).reset(); err != nil {
-				return err
-			}
-			var groups []taskGroup
-			for _, n := range names {
-				g, err := gatherTaskGroups(n, f, store, global)
-				if err != nil {
-					return err
-				}
-				groups = append(groups, g...)
-			}
-			config, err := readConfig()
+		Handler: func(c *Ctx) error { return listTasks(c, nil) }}
+}
+
+// viewCommand is a ready-made listing: the open tasks dated within days.
+func viewCommand(name, description string, days dayWindow) *Command {
+	return &Command{Name: name, Description: description,
+		Options: []Option{
+			flag("global", "list across every workspace"),
+			flag("starred", "only starred tasks"),
+			flag("hasDescription", "only tasks that carry a description"),
+			{Name: "in-board", Description: "only tasks on a board (name, number or inbox)", Kind: String, Complete: boardOrInbox},
+			workspaceOption(),
+		},
+		Handler: func(c *Ctx) error { return listTasks(c, &days) }}
+}
+
+// listTasks numbers and draws the tasks the flags, and a view's days, keep.
+func listTasks(c *Ctx, days *dayWindow) error {
+	f := taskFilters{checked: c.Bool("checked"), deleted: c.Bool("deleted"), starred: c.Bool("starred"), hasDescription: c.Bool("hasDescription"), days: days}
+	if p, ok := c.Str("period"); ok {
+		f.period = &p
+	}
+	if b, ok := c.Str("in-board"); ok {
+		f.inBoard = &b
+	}
+	global := c.Bool("global")
+	var names []string
+	if global {
+		all, err := allWorkspaces()
+		if err != nil {
+			return err
+		}
+		names = all
+	} else {
+		name, err := targetWorkspaceName(workspaceFlag(c))
+		if err != nil {
+			return err
+		}
+		names = []string{name}
+	}
+	// Filters are checked before any numbering is reset, so a typo
+	// doesn't cost the numbers the last listing handed out.
+	if f.period != nil {
+		if _, err := periodEnd(*f.period, now()); err != nil {
+			return err
+		}
+	}
+	if f.inBoard != nil {
+		for _, n := range names {
+			m, _, err := openWorkspace(workspacePath(n))
 			if err != nil {
 				return err
 			}
-			return present.taskList(groups, now(), config)
-		}}
+			if _, err := inBoardFilter(f, boardRepository(m), workspacePath(n)); err != nil {
+				return err
+			}
+		}
+	}
+	var store kvStore
+	if global {
+		store = globalKvStore(dataHome())
+	} else {
+		store = workspaceKvStore(workspacePath(names[0]), "tasks")
+	}
+	if err := store.reset(); err != nil {
+		return err
+	}
+	// Every numbering this listing replaces is cleared too.
+	if global {
+		for _, n := range names {
+			if err := workspaceKvStore(workspacePath(n), "tasks").reset(); err != nil {
+				return err
+			}
+		}
+	} else if err := globalKvStore(dataHome()).reset(); err != nil {
+		return err
+	}
+	var groups []taskGroup
+	for _, n := range names {
+		g, err := gatherTaskGroups(n, f, store, global)
+		if err != nil {
+			return err
+		}
+		groups = append(groups, g...)
+	}
+	config, err := readConfig()
+	if err != nil {
+		return err
+	}
+	return present.taskList(groups, now(), config)
 }
 
 // editTask hands a `set` field's body the whole tail as its value.

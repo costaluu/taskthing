@@ -88,6 +88,8 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `add "<input>"`                | Create a task, parsing `d:[…]` / `r:[…]` out of the text                       |
 | `list [filters]`               | List open tasks, numbered (see filters below)                                  |
+| `today` / `overdue`            | List the open tasks dated today / before today                                 |
+| `upcoming` / `week`            | List the open tasks dated after today / today and the six days after           |
 | `check <id>` / `uncheck <id>`  | Complete / reopen a task (checking a recurring task mints its next occurrence) |
 | `star <id>` / `unstar <id>`    | Toggle a task's star                                                           |
 | `delete <id>` / `recover <id>` | Soft-delete / restore a task                                                   |
@@ -96,6 +98,8 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | `set description <id> <value>` | Set a task's description                                                       |
 | `set date-time <id> <value>`   | Rewrite the schedule (an empty value clears it)                                |
 | `set board <id> <ref>`         | Move a task to a board by name, number or `inbox`                              |
+
+**Views** (`today`, `overdue`, `upcoming`, `week`) are listings: they hand out the numbers the verbs take, and accept `--starred`, `--hasDescription`, `--in-board`, `--global` and `--workspace`. Days are calendar days in UTC, as the listing shows them; undated tasks are in none.
 
 **`list` filters:** `--checked` (include completed), `--starred`, `--deleted`, `--hasDescription`, `--period=<Nd|Nm|Ny>` (within a window from now), `--in-board=<name>,…` (or `--in-board=inbox`).
 
