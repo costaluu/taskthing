@@ -1571,6 +1571,147 @@ func TestOptionNeedsAValue(t *testing.T) {
 	mustCode(t, taskthing(t, home, "list", "--checked"), 0)
 }
 
+// ── undo ─────────────────────────────────────────────────────────────────────
+
+func TestUndoReversesCheck(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dog")
+	taskthing(t, home, "list")
+	taskthing(t, home, "check", "1")
+	r := taskthing(t, home, "undo")
+	mustCode(t, r, 0)
+	contains(t, r.stdout, "walk the dog")
+	equal(t, flag(tasks(t, home)[0], "completed"), false)
+}
+
+// Each undo takes back one command, newest first, until none is left.
+func TestUndoWalksBackOneCommandAtATime(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dgo")
+	taskthing(t, home, "list")
+	taskthing(t, home, "set title", "1", "walk the dog")
+	taskthing(t, home, "star", "1")
+
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	equal(t, flag(tasks(t, home)[0], "star"), false)
+	equal(t, title(tasks(t, home)[0]), "walk the dog")
+
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	equal(t, title(tasks(t, home)[0]), "walk the dgo")
+
+	// Undoing the add bins the task: it leaves the list, and `recover` can bring it back.
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	equal(t, flag(tasks(t, home)[0], "deleted"), true)
+	equal(t, strings.TrimSpace(taskthing(t, home, "list").stdout), "")
+
+	readable(t, taskthing(t, home, "undo"), `(?i)nothing to undo`)
+}
+
+// Undoing a recurring check reopens the occurrence and bins the one it minted.
+func TestUndoRecurringCheck(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	seedTask(t, home, js.Obj("title", "water plants", "rrule", "DTSTART:20260701T090000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO"))
+	taskthing(t, home, "list")
+	original := kvStore(t, home, "tasks")["1"]
+	taskthing(t, home, "check", "1")
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	for _, task := range tasks(t, home) {
+		equal(t, flag(task, "completed"), false)
+		equal(t, flag(task, "deleted"), id(task) != original)
+	}
+	equal(t, strings.TrimSpace(taskthing(t, home, "list").stdout), "1 water plants")
+}
+
+// One command over several tasks is one undo.
+func TestUndoTakesBackAWholeCommand(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dog")
+	taskthing(t, home, "add", "pay the bill")
+	taskthing(t, home, "list")
+	taskthing(t, home, "check", "1", "2")
+	r := taskthing(t, home, "undo")
+	mustCode(t, r, 0)
+	contains(t, r.stdout, "walk the dog")
+	contains(t, r.stdout, "pay the bill")
+	for _, task := range tasks(t, home) {
+		equal(t, flag(task, "completed"), false)
+	}
+}
+
+func TestUndoBoardDelete(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "board add", "work")
+	taskthing(t, home, "add", "ship it b:[work]")
+	board := id(readAll(t, "board", home)[0])
+	mustCode(t, taskthing(t, home, "board delete", "work"), 0)
+	equal(t, get(tasks(t, home)[0], "board"), any("inbox"))
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	equal(t, flag(readAll(t, "board", home)[0], "deleted"), false)
+	equal(t, get(tasks(t, home)[0], "board"), any(board))
+}
+
+// In a remote workspace an undo is new events: the log only ever grows.
+func TestUndoAppendsEvents(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	associate(t, home, remote(t))
+	taskthing(t, home, "add", "walk the dog")
+	taskthing(t, home, "list")
+	taskthing(t, home, "star", "1")
+	before := mdwal.SerializeLog(parseLog(t, home))
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	after := parseLog(t, home)
+	if !strings.HasPrefix(mdwal.SerializeLog(after), before) {
+		t.Fatalf("undo rewrote the log")
+	}
+	last := after[len(after)-1]
+	equal(t, len(after), 3)
+	equal(t, last.Op, "UPDATE_FIELD")
+	equal(t, last.Payload.Value("field"), any("star"))
+	equal(t, last.Payload.Value("value"), any(false))
+}
+
+// A field edited again after the command (a peer's edit that a pull brought
+// in) keeps its newer value.
+func TestUndoKeepsNewerEdits(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "add", "walk the dgo")
+	taskthing(t, home, "list")
+	taskthing(t, home, "set title", "1", "walk the dog")
+	taskID := kvStore(t, home, "tasks")["1"]
+	if err := workspaceMdwal(home).UpdateField("task", taskID, "title", "walk the cat", nil); err != nil {
+		t.Fatal(err)
+	}
+	readable(t, taskthing(t, home, "undo"), `(?i)changed`)
+	equal(t, title(tasks(t, home)[0]), "walk the cat")
+}
+
+// A command that changed nothing leaves nothing to undo, and undo acts on the
+// workspace it is pointed at.
+func TestUndoSkipsCommandsThatChangedNothing(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	os.MkdirAll(filepath.Join(home, "workspaces", "side"), 0o755)
+	taskthing(t, home, "add", "walk the dog")
+	taskthing(t, home, "add", "side task", "--workspace=side")
+	taskthing(t, home, "list")
+	mustCode(t, taskthing(t, home, "check", "99"), 1)
+	taskthing(t, home, "boards")
+
+	mustCode(t, taskthing(t, home, "undo", "--workspace=side"), 0)
+	equal(t, flag(tasks(t, home, "side")[0], "deleted"), true)
+	equal(t, flag(tasks(t, home)[0], "deleted"), false)
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	equal(t, flag(tasks(t, home)[0], "deleted"), true)
+	readable(t, taskthing(t, home, "undo"), `(?i)nothing to undo`)
+}
+
 // ── views ────────────────────────────────────────────────────────────────────
 
 // viewHome holds one open task per day around now (2026-07-22), an undated

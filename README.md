@@ -98,8 +98,11 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | `set description <id> <value>` | Set a task's description                                                       |
 | `set date-time <id> <value>`   | Rewrite the schedule (an empty value clears it)                                |
 | `set board <id> <ref>`         | Move a task to a board by name, number or `inbox`                              |
+| `undo`                         | Take back the last command that changed tasks or boards                        |
 
 **Views** (`today`, `overdue`, `upcoming`, `week`) are listings: they hand out the numbers the verbs take, and accept `--starred`, `--hasDescription`, `--in-board`, `--global` and `--workspace`. Days are calendar days in UTC, as the listing shows them; undated tasks are in none.
+
+**`undo`** walks back one command per run, newest first (the last 100 per workspace), by writing the previous values as new edits — in a remote workspace those are ordinary events, so peers converge on the undone state. Undoing an `add` (or the occurrence a recurring `check` minted) soft-deletes the task. A field that changed again since — a peer's edit your `pull` brought in — keeps its newer value. `clear`, workspace and config commands are not undoable.
 
 **`list` filters:** `--checked` (include completed), `--starred`, `--deleted`, `--hasDescription`, `--period=<Nd|Nm|Ny>` (within a window from now), `--in-board=<name>,…` (or `--in-board=inbox`).
 

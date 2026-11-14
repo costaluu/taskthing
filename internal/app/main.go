@@ -23,5 +23,7 @@ func Main(argv []string) int {
 	if len(argv) > 0 && argv[0] == "help" {
 		argv = append([]string{"--help"}, argv[1:]...)
 	}
-	return BuildCLI().Run(argv)
+	code := BuildCLI().Run(argv)
+	flushUndo()
+	return code
 }

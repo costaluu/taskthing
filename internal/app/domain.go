@@ -128,7 +128,11 @@ type repository struct {
 }
 
 func (r repository) create(model *js.Object) (*js.Object, error) {
-	return r.m.CreateEntity(r.entityType, model, nil)
+	created, err := r.m.CreateEntity(r.entityType, model, nil)
+	if err == nil {
+		recordCreation(r.m.Root(), r.entityType, str(created, "id"))
+	}
+	return created, err
 }
 
 // findByID: a missing (or unreadable) entity is a miss, not a failure.
@@ -213,15 +217,21 @@ func (r repository) update(model *js.Object) (bool, error) {
 		if err := r.m.UpdateField(r.entityType, id, field, model.Value(field), nil); err != nil {
 			return false, err
 		}
+		recordFieldChange(r.m.Root(), r.entityType, id, field, stored, model.Value(field))
 	}
 	return true, nil
 }
 
 func (r repository) setDeleted(id string, value bool) (bool, error) {
-	if r.findByID(id) == nil {
+	current := r.findByID(id)
+	if current == nil {
 		return false, nil
 	}
-	return true, r.m.UpdateField(r.entityType, id, "deleted", value, nil)
+	if err := r.m.UpdateField(r.entityType, id, "deleted", value, nil); err != nil {
+		return true, err
+	}
+	recordFieldChange(r.m.Root(), r.entityType, id, "deleted", boolean(current, "deleted"), value)
+	return true, nil
 }
 
 func taskRepository(m *mdwal.Mdwal) repository  { return repository{m, "task", mdwal.TaskFields} }

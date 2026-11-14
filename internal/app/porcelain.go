@@ -179,6 +179,7 @@ func report(failure func(error) string, work func(config *js.Object) ([]segment,
 	}
 	segments, err := work(config)
 	if err == nil {
+		recordOutcome(segments)
 		err = present.outcome(segments, config)
 	}
 	if err != nil {

@@ -59,6 +59,7 @@ func BuildCLI() *CLI {
 		taskVerb("recover", "restore a deleted task", isDeleted, func(ref, ws string) error { return setTaskDeleted(ref, false, ws) }),
 		taskVerb("clear", "remove an already-deleted task from this machine", isDeleted, clearTask),
 		setCommand(),
+		undoCommand(),
 		boardCommand(),
 		{Name: "boards", Description: "list boards (shortcut for `board list`)", Options: []Option{workspaceOption()},
 			Handler: func(c *Ctx) error { return listBoards(workspaceFlag(c)) }},
