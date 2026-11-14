@@ -288,7 +288,9 @@ func TestZshCompletion(t *testing.T) {
 		{"taskthing check --workspace=s\t", "taskthing check --workspace=side"},
 	}
 	for _, c := range cases {
-		out := zsh(t, env, `zpty z zsh -i
+		// -d: no global rc files — a distro's /etc/zshrc can swallow what is
+		// typed before its prompt (Fedora's does), and the shim isn't theirs to test.
+		out := zsh(t, env, `zpty z zsh -d -i
 zpty -w z 'PROMPT='
 zpty -w -n z `+shellQuote(c.typed)+`
 sleep 0.5
