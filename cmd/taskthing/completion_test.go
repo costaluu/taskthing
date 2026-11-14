@@ -469,11 +469,13 @@ func TestShellsCompleteAddText(t *testing.T) {
 	home := completionHome(t)
 	dir, env := zshEnv(t, home)
 	os.WriteFile(filepath.Join(dir, ".zshrc"), []byte(`eval "$(taskthing completion zsh)"
+alias tt=taskthing
 dump() { print -r -- ""; print -r -- "LINE<<$BUFFER>>END" }
 zle -N dump; bindkey '^X^D' dump
 PROMPT=
 `), 0o644)
-	os.WriteFile(filepath.Join(dir, "rc.bash"), []byte(`eval "$(taskthing completion bash)"
+	os.WriteFile(filepath.Join(dir, "rc.bash"), []byte(`alias tt=taskthing
+eval "$(taskthing completion bash)"
 bind -x '"\C-x\C-d": echo "LINE<<$READLINE_LINE>>END"'
 PS1=
 `), 0o644)
@@ -489,6 +491,11 @@ PS1=
 		// unquoted, word by word (zsh reads an unquoted [ as a glob)
 		{"bash", "taskthing add walk d\t", `taskthing add walk d:\[`},
 		{"bash", "taskthing add walk d:[next w\t", `taskthing add walk d:[next week\] `},
+		// a date outside add, over two words
+		{"bash zsh", "taskthing set date-time " + number(t, home, "buy milk") + " next w\t", "taskthing set date-time " + number(t, home, "buy milk") + " next week "},
+		{"bash zsh", "taskthing list --period 2d\t", "taskthing list --period 2d "},
+		// an alias for taskthing completes like it
+		{"bash zsh", "tt check milk\t", "tt check " + number(t, home, "buy milk") + " "},
 		// what completed before still does
 		{"bash zsh", "taskthing check milk\t", "taskthing check " + number(t, home, "buy milk") + " "},
 		{"bash zsh", "taskthing check review\t", "taskthing check review"},
@@ -507,6 +514,38 @@ PS1=
 					t.Errorf("got %q\nwant %q", got, c.want)
 				}
 			})
+		}
+	}
+}
+
+// TestCompleteDatesAndPeriods: the other places a date is typed get the same
+// help as add's date tag.
+func TestCompleteDatesAndPeriods(t *testing.T) {
+	home := completionHome(t)
+	milk := number(t, home, "buy milk")
+	cases := []struct {
+		words []string
+		want  []string
+	}{
+		{[]string{"set", "date-time", milk, "to"}, []string{"today\t2026/07/22 00:00", "tomorrow\t2026/07/23 00:00"}},
+		// the value runs over several words: the candidate is the current word's end
+		{[]string{"set", "date-time", milk, "next", "w"}, []string{"week\t2026/07/29 00:00\tnext week"}},
+		{[]string{"set", "date-time", milk, "in 3 days"}, []string{"in 3 days\t2026/07/25 00:00"}},
+		{[]string{"set", "date-time", milk, "zzz"}, nil},
+		// a period: the usual windows, or the number typed in each unit, with where it ends
+		{[]string{"list", "--period", ""}, []string{"1d\tuntil 2026/07/23", "7d\tuntil 2026/07/29", "1m\tuntil 2026/08/22", "1y\tuntil 2027/07/22"}},
+		{[]string{"list", "--period", "3"}, []string{"3d\tuntil 2026/07/25", "3m\tuntil 2026/10/22", "3y\tuntil 2029/07/22"}},
+		{[]string{"list", "--period=2"}, []string{"--period=2d\tuntil 2026/07/24", "--period=2m\tuntil 2026/09/22", "--period=2y\tuntil 2028/07/22"}},
+		{[]string{"list", "--period", "2d"}, []string{"2d\tuntil 2026/07/24"}},
+		{[]string{"list", "--period", "soon"}, nil},
+	}
+	for _, c := range cases {
+		got := complete(t, home, c.words...)
+		if c.want == nil {
+			c.want = []string{""}
+		}
+		if strings.Join(got, "\n") != strings.Join(c.want, "\n") {
+			t.Errorf("complete %q\n got %q\nwant %q", c.words, got, c.want)
 		}
 	}
 }

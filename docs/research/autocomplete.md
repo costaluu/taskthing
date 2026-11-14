@@ -106,7 +106,8 @@ Cada item é um ciclo de TDD na emenda já existente: `__complete` testado como 
 - **Texto do `add`** (parte do item 4): tags oferecidas depois de um espaço ou pelas primeiras letras; datas, recorrências e boards dentro da tag aberta, em qualquer ponto do texto; texto livre validado pelo próprio parser e descrito pela data resolvida; valor de tag atravessando várias palavras sem aspas.
 - **Aspas abertas:** no zsh, `compadd -S ''` insere sem fechar a aspa. No bash, o readline fecha a aspa atrás de um candidato único mesmo com `nospace`; o shim devolve duas entradas que compartilham o texto, e o readline insere o prefixo comum sem fechar nada. Efeito colateral: com `show-all-if-ambiguous` ligado, as duas entradas aparecem listadas uma vez.
 - **Testes em shell real:** `TestShellsCompleteAddText` digita num bash e num zsh interativos via pty e lê a linha do editor por uma tecla ligada a isso, porque uma linha com aspa aberta não pode ser executada.
-- **Ainda sem candidatos:** `set date-time` e `list --period`.
+- **Datas fora do `add`:** `set date-time` oferece as mesmas datas, também atravessando palavras; `list --period` oferece as janelas usuais, ou o número digitado em cada unidade, com o dia em que terminam.
+- **Alias:** no zsh um alias para `taskthing` já completava (expansão de alias); no bash o shim registra o completion para cada alias `='taskthing'` definido antes da linha de `eval`.
 
 ## 9. Perguntas em aberto
 

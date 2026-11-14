@@ -295,6 +295,17 @@ func boardOrInbox(c *Ctx, cur string) []candidate {
 func taskThen(value completer) completer  { return refThen(taskRefs(isLive, false), value) }
 func boardThen(value completer) completer { return refThen(boardRefs(false, false), value) }
 
+// taskThenWords is taskThen for a value completed past its first word.
+func taskThenWords(value completer) completer {
+	ref := taskRefs(isLive, false)
+	return func(c *Ctx, cur string) []candidate {
+		if len(c.Positional) == 0 {
+			return ref(c, cur)
+		}
+		return value(c, cur)
+	}
+}
+
 func refThen(ref, value completer) completer {
 	return func(c *Ctx, cur string) []candidate {
 		if len(c.Positional) == 0 {
@@ -430,11 +441,10 @@ func addArgs(c *Ctx, cur string) []candidate {
 		var out []candidate
 		for _, v := range values {
 			// The whole text with the tag closed, cut down to the current word.
-			full := m[1] + v.value + "]"
-			if len(full) < len(before) || !strings.EqualFold(full[:len(before)], before) {
+			word, ok := wordOf(m[1]+v.value+"]", before)
+			if !ok {
 				continue
 			}
-			word := full[len(before):]
 			if quoted {
 				word += " "
 			}
@@ -467,6 +477,54 @@ func addArgs(c *Ctx, cur string) []candidate {
 		return nil
 	}
 	return append(out, nospace)
+}
+
+// wordOf is the current word's share of full, a text whose earlier words
+// are before; false when full doesn't start with them.
+func wordOf(full, before string) (string, bool) {
+	if len(full) < len(before) || !strings.EqualFold(full[:len(before)], before) {
+		return "", false
+	}
+	return full[len(before):], true
+}
+
+// dateValue is `set date-time`'s value, which may run over several words:
+// the dates add's tag offers, cut down to the current word.
+func dateValue(c *Ctx, cur string) []candidate {
+	before := ""
+	if len(c.Positional) > 1 {
+		before = strings.Join(c.Positional[1:], " ") + " "
+	}
+	var out []candidate
+	for _, v := range datePhrases(before + cur) {
+		if word, ok := wordOf(v.value, before); ok {
+			out = append(out, candidate{value: word, desc: v.desc, display: v.value})
+		}
+	}
+	return out
+}
+
+var periodTyped = regexp.MustCompile(`^(\d*)([dmy]?)$`)
+
+// periodValue offers list's windows — the usual ones, or the number typed
+// in each unit — with the day each ends on.
+func periodValue(_ *Ctx, cur string) []candidate {
+	m := periodTyped.FindStringSubmatch(cur)
+	config, err := readConfig()
+	if m == nil || err != nil {
+		return nil
+	}
+	periods := []string{"1d", "7d", "1m", "1y"}
+	if m[1] != "" {
+		periods = []string{m[1] + "d", m[1] + "m", m[1] + "y"}
+	}
+	var out []candidate
+	for _, p := range periods {
+		if end, err := periodEnd(p, now()); err == nil {
+			out = append(out, candidate{value: p, desc: "until " + absoluteDateTime(end, cfgDateFormat(config))[:10]})
+		}
+	}
+	return byPrefix(cur, out)
 }
 
 func byPrefixFold(cur string, cands []candidate) []candidate {

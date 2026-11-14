@@ -244,7 +244,7 @@ func listCommand() *Command {
 			flag("deleted", "show the bin instead of the live tasks"),
 			flag("starred", "only starred tasks"),
 			flag("hasDescription", "only tasks that carry a description"),
-			{Name: "period", Description: "only tasks due within a window, e.g. 2d, 3m, 1y", Kind: String},
+			{Name: "period", Description: "only tasks due within a window, e.g. 2d, 3m, 1y", Kind: String, Complete: periodValue},
 			{Name: "in-board", Description: "only tasks on a board (name, number or inbox)", Kind: String, Complete: boardOrInbox},
 			workspaceOption(),
 		},
@@ -355,8 +355,8 @@ func editTask(positional []string, workspace string, edit func(value string, tas
 var taskFields = []string{"title", "description", "date-time", "board"}
 
 func setCommand() *Command {
-	field := func(name, description string, value completer, edit func(string, *js.Object, repository, *mdwal.Mdwal, string, *js.Object) (taskOutcome, error)) *Command {
-		return &Command{Name: name, Description: description, Options: []Option{workspaceOption()}, Args: taskThen(value),
+	field := func(name, description string, args completer, edit func(string, *js.Object, repository, *mdwal.Mdwal, string, *js.Object) (taskOutcome, error)) *Command {
+		return &Command{Name: name, Description: description, Options: []Option{workspaceOption()}, Args: args,
 			Handler: func(c *Ctx) error { return editTask(c.Positional, workspaceFlag(c), edit) }}
 	}
 	return &Command{Name: "set", Description: "edit a task field",
@@ -364,7 +364,7 @@ func setCommand() *Command {
 			return fmt.Sprintf("a task has no %s — try %s", f, strings.Join(taskFields, ", "))
 		}),
 		Commands: []*Command{
-			field("title", "retitle a task", currentValue("title", referencedTask), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
+			field("title", "retitle a task", taskThen(currentValue("title", referencedTask)), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
 				if js.Trim(value) == "" {
 					return taskOutcome{}, errors.New("a task needs a title — `set title <task> <new title>`")
 				}
@@ -373,13 +373,13 @@ func setCommand() *Command {
 				}
 				return taskOutcome{title: value, predicate: "title updated"}, nil
 			}),
-			field("description", "set a task's description", currentValue("description", referencedTask), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
+			field("description", "set a task's description", taskThen(currentValue("description", referencedTask)), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, _ *js.Object) (taskOutcome, error) {
 				if _, err := tasks.update(with(task, "description", value)); err != nil {
 					return taskOutcome{}, err
 				}
 				return taskOutcome{title: str(task, "title"), predicate: "description updated"}, nil
 			}),
-			field("date-time", "schedule a task, or clear its schedule with an empty value", nil, func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, config *js.Object) (taskOutcome, error) {
+			field("date-time", "schedule a task, or clear its schedule with an empty value", taskThenWords(dateValue), func(value string, task *js.Object, tasks repository, _ *mdwal.Mdwal, _ string, config *js.Object) (taskOutcome, error) {
 				if value == "" {
 					if _, err := tasks.update(with(task, "rrule", nil)); err != nil {
 						return taskOutcome{}, err
@@ -399,7 +399,7 @@ func setCommand() *Command {
 				}
 				return datedOutcome(str(task, "title"), "schedule updated", &rule, config)
 			}),
-			field("board", "move a task to a board (name, number or inbox)", boardOrInbox, func(value string, task *js.Object, tasks repository, m *mdwal.Mdwal, root string, _ *js.Object) (taskOutcome, error) {
+			field("board", "move a task to a board (name, number or inbox)", taskThen(boardOrInbox), func(value string, task *js.Object, tasks repository, m *mdwal.Mdwal, root string, _ *js.Object) (taskOutcome, error) {
 				boards := boardRepository(m)
 				boardID := mdwal.INBOX
 				if value != "" {

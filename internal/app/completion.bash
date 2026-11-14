@@ -90,3 +90,9 @@ _taskthing() {
 }
 # nosort: numbers and dates come in the order they mean.
 complete -o nosort -F _taskthing taskthing
+# An alias for taskthing (alias tt=taskthing) completes like it. bash looks
+# completions up by the word typed, so each alias defined so far gets its own.
+while IFS= read -r _taskthing_alias; do
+  [[ $_taskthing_alias ]] && complete -o nosort -F _taskthing "$_taskthing_alias"
+done < <(alias -p | sed -n "s/^alias \([^=]*\)='taskthing'\$/\1/p")
+unset _taskthing_alias

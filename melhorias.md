@@ -26,6 +26,9 @@ Lista de ideias (2026-11-14), pensada a partir da proposta do projeto: gerenciad
 
 ## Sync e multi-máquina
 - `sync` automático: `sync --watch` ou uma unit systemd de usuário gerada por `taskthing sync install`.
+  - Estado em 2026-11-14: as chaves `autoSync` (padrão 4), `autoRebuild` (5) e `autoTruncate` (10) existem em `config.md`, mas nenhum código as lê. Não há sync automático hoje.
+  - Restrição: não pode virar um commit por alteração. O modelo já ajuda, porque cada mudança é uma linha no `events.log` e o commit só nasce no `sync`.
+  - Opções a discutir: (a) por contagem, a cada N comandos que alteram algo, como a config prevê, com o custo de o N-ésimo comando esperar a rede; (b) timer de usuário do systemd com debounce, que só sincroniza se houver eventos não publicados e o último sync tiver mais de X minutos; (c) squash dos commits locais ao publicar. Sugestão do agente: (b). Os termos de uso do GitHub sobre frequência de commits não foram verificados.
 - `status` (o que está pendente de publicar, quais peers existem) e `log <id>` (histórico de uma tarefa: quem editou o quê).
 - `conflicts`: mostrar campos sobrescritos por outro peer pelo LWW, que hoje é resolvido em silêncio.
 - `doctor`: valida `events.log`, peers, remote e versão do schema.

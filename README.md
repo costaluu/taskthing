@@ -40,6 +40,8 @@ TAB completes commands, flags (`--opt value` and `--opt=value`), boards, workspa
 
 It also writes `add`'s tags with you. In `taskthing add "walk the dog <TAB>`, the blank after the title lists the tags the text doesn't carry yet (`d:[`, `r:[`, `b:[`); `d<TAB>` opens one; inside it, `d:[to<TAB>` lists `today` and `tomorrow` with the day each means, `r:[every <TAB>` lists recurrences, `b:[<TAB>` your boards. Anything else the parser reads (`d:[in 3 days<TAB>`) is closed and shown as the date it resolves to, so you see how it will be read before you run it. The quote stays open, so one TAB after another writes the whole line. Without quotes it works word by word in bash; in zsh, quote the text: zsh reads an unquoted `[` as a glob.
 
+The same dates complete in `set date-time <task> next w<TAB>`, and `list --period <TAB>` offers windows (`1d`, `7d`, `1m`, `1y`, or the number you typed in each unit) with the day each ends on. An alias (`alias tt=taskthing`) completes like `taskthing`; in bash, define it above the completion line in your rc file.
+
 ---
 
 ## Quick start
