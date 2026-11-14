@@ -1921,3 +1921,15 @@ func TestDashShapeDoesNotSwallowTypos(t *testing.T) {
 		readable(t, taskthing(t, home, argv[0], argv[1:]...), `(?i)unknown option`)
 	}
 }
+
+// An id starting with two dashes still needs `--` before it: without one it
+// reads as a long option, exactly as a typo does.
+func TestDoubleDashIDNeedsTheSeparator(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	const id = "--useandom26T198340PX"
+	seedAs(t, home, "task", id, js.Obj("title", "one"))
+	readable(t, taskthing(t, home, "check", id), `(?i)unknown option`)
+	mustCode(t, taskthing(t, home, "check", "--", id), 0)
+	equal(t, flag(byTitle(tasks(t, home), "one"), "completed"), true)
+}
