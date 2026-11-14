@@ -637,6 +637,52 @@ func boardCommand() *Command {
 						})
 					})
 				}},
+			{Name: "switch", Description: "move every task of a board (or the inbox) to another", Options: []Option{workspaceOption()}, Args: boardPair,
+				Handler: func(c *Ctx) error {
+					from, to := first(c.Positional), ""
+					if len(c.Positional) > 1 {
+						to = c.Positional[1]
+					}
+					return reportBoard("switch this board's tasks", func(*js.Object) (entityOutcome, error) {
+						root, err := targetWorkspace(workspaceFlag(c))
+						if err != nil {
+							return entityOutcome{}, err
+						}
+						m, _, err := openWorkspace(root)
+						if err != nil {
+							return entityOutcome{}, err
+						}
+						boards, tasks := boardRepository(m), taskRepository(m)
+						fromID, err := resolveBoard(boards, root, from)
+						if err != nil {
+							return entityOutcome{}, err
+						}
+						toID, err := resolveBoard(boards, root, to)
+						if err != nil {
+							return entityOutcome{}, err
+						}
+						if fromID == toID {
+							return entityOutcome{}, errors.New("both are the same board — `board switch <from> <to>`")
+						}
+						name := func(id string) string {
+							if b := boards.findByID(id); b != nil {
+								return str(b, "name")
+							}
+							return id
+						}
+						moving, err := tasks.filter(func(t *js.Object) bool { return str(t, "board") == fromID && !boolean(t, "deleted") })
+						if err != nil {
+							return entityOutcome{}, err
+						}
+						for _, t := range moving {
+							if _, err := tasks.update(with(t, "board", toID)); err != nil {
+								return entityOutcome{}, err
+							}
+						}
+						suffix := fmt.Sprintf(". %d tasks moved", len(moving))
+						return entityOutcome{name: name(fromID), predicate: "switched", value: &valueChip{" to ", name(toID)}, suffix: &suffix}, nil
+					})
+				}},
 			{Name: "recover", Description: "restore a deleted board", Options: []Option{workspaceOption()}, Args: boardRefs(true, true),
 				Handler: func(c *Ctx) error {
 					return eachReference(c.Positional, func(ref string) error {

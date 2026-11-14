@@ -287,6 +287,20 @@ func boardRefs(deleted, repeat bool) completer {
 	}
 }
 
+// boardPair is switch's two boards: either may be the inbox, not both the same.
+func boardPair(c *Ctx, cur string) []candidate {
+	if len(c.Positional) > 1 {
+		return nil
+	}
+	var out []candidate
+	for _, b := range boardCandidates(c, false, true) {
+		if !slices.Contains(c.Positional, b.value) && entityMatch(cur, b) {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
 func boardOrInbox(c *Ctx, cur string) []candidate {
 	return byPrefix(cur, boardCandidates(c, false, true))
 }

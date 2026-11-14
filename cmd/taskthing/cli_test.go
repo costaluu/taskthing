@@ -802,6 +802,56 @@ func TestBoardClear(t *testing.T) {
 	equal(t, flag(b, "deleted"), false)
 }
 
+// board switch moves a board's tasks — open and completed, not the binned —
+// to another board; either side may be the inbox.
+func TestBoardSwitch(t *testing.T) {
+	t.Parallel()
+	home := dataHome(t)
+	taskthing(t, home, "board add", "work")
+	taskthing(t, home, "board add", "home")
+	for _, input := range []string{"ship it b:[work]", "review b:[work]", "done one b:[work]", "binned b:[work]", "walk the dog"} {
+		mustCode(t, taskthing(t, home, "add", input), 0)
+	}
+	listing := taskthing(t, home, "list").stdout
+	taskthing(t, home, "check", numberOf(listing, "done one"))
+	taskthing(t, home, "delete", numberOf(listing, "binned"))
+	ids := map[string]string{"inbox": "inbox"}
+	for _, b := range readAll(t, "board", home) {
+		ids[b.Value("name").(string)] = id(b)
+	}
+	on := func(board string) string {
+		var names []string
+		for _, task := range tasks(t, home) {
+			if get(task, "board") == any(ids[board]) {
+				names = append(names, title(task))
+			}
+		}
+		sort.Strings(names)
+		return strings.Join(names, "|")
+	}
+
+	r := taskthing(t, home, "board switch", "work", "home")
+	mustCode(t, r, 0)
+	contains(t, r.stdout, "3 tasks moved")
+	equal(t, on("home"), "done one|review|ship it")
+	equal(t, on("work"), "binned")
+
+	mustCode(t, taskthing(t, home, "board switch", "home", "inbox"), 0)
+	equal(t, on("inbox"), "done one|review|ship it|walk the dog")
+	mustCode(t, taskthing(t, home, "board switch", "inbox", "work"), 0)
+	equal(t, on("work"), "binned|done one|review|ship it|walk the dog")
+	equal(t, on("inbox"), "")
+
+	// One command, one undo.
+	mustCode(t, taskthing(t, home, "undo"), 0)
+	equal(t, on("inbox"), "done one|review|ship it|walk the dog")
+
+	readable(t, taskthing(t, home, "board switch", "work", "work"), `(?i)same board`)
+	readable(t, taskthing(t, home, "board switch", "work", "nope"), `(?i)no such board`)
+	readable(t, taskthing(t, home, "board switch", "work"), `(?i)no board given`)
+	equal(t, on("work"), "binned")
+}
+
 // ── task verbs ───────────────────────────────────────────────────────────────
 
 func TestCheckOneOffMintsNothing(t *testing.T) {

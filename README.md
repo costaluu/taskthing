@@ -122,6 +122,7 @@ The brackets are required and the whole `tag:[…]` is stripped from the title. 
 | `board delete <id>` / `board recover <id>` | Soft-delete / restore a board (its tasks fall back to inbox) |
 | `board delete <id> --tasks`                | Soft-delete a board and its tasks                            |
 | `board clear <id>`                         | Soft-delete every task of a board, keeping the board         |
+| `board switch <from> <to>`                 | Move a board's tasks to another (either may be `inbox`)      |
 
 ### Workspaces
 
