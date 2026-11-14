@@ -73,7 +73,7 @@ func TestComplete(t *testing.T) {
 		{[]string{"list", "--in-board", "w"}, []string{"work"}},
 		{[]string{"board", "delete", "work", ""}, []string{"my board"}},
 		{[]string{"board", "set", "color", "work", "gree"}, []string{"green", "greenBright"}},
-		{[]string{"add", "milk", "b:[my"}, []string{"b:[my board]"}},
+		{[]string{"add", "milk", "b:[my"}, []string{"b:[my board]\t\tmy board"}},
 		{[]string{"use", ""}, []string{"side"}},
 		{[]string{"check", "--workspace", "s"}, []string{"side"}},
 		{[]string{"config", "set", "autoUpdate", ""}, []string{"confirm", "silent"}},
@@ -361,5 +361,152 @@ func TestCompletePeerAndBranch(t *testing.T) {
 	got = strings.Join(complete(t, home, "truncate", "--branch", ""), "\n")
 	if want := "master\nusers/" + author + "\tyour peer branch"; got != want {
 		t.Errorf("--branch: got %q, want %q", got, want)
+	}
+}
+
+// TestCompleteAddTags: inside add's text, an open tag completes wherever it
+// sits — the whole quoted title arrives as one word — and a blank after the
+// title offers the tags it doesn't carry yet.
+const (
+	dateHint       = "a date: today, tomorrow, friday, in 3 days, 25/12…"
+	recurrenceHint = "a recurrence: every day, every monday, every 2 weeks…"
+)
+
+func TestCompleteAddTags(t *testing.T) {
+	home := completionHome(t)
+	cases := []struct {
+		words []string
+		want  []string
+	}{
+		// the candidate is the whole word, shown as just the part it adds
+		// the candidate is the whole word, shown as just the part it adds; a
+		// blank follows and the shell adds nothing, so the next tag can be typed
+		{[]string{"add", "milk b:[my"}, []string{"milk b:[my board] \t\tmy board", "\tnospace"}},
+		{[]string{"add", "milk d:[tomorrow] B:[w"}, []string{"milk d:[tomorrow] B:[work] \t\twork", "\tnospace"}},
+		// a closed tag is not an open one
+		{[]string{"add", "milk b:[work]"}, nil},
+		// a date tag offers phrases the parser reads, with the day each means
+		// (now is Wednesday 2026-07-22)
+		{[]string{"add", "d:[to"}, []string{"d:[today]\t2026/07/22 00:00\ttoday", "d:[tomorrow]\t2026/07/23 00:00\ttomorrow"}},
+		{[]string{"add", "walk", "date:[FRI"}, []string{"date:[friday]\t2026/07/24 00:00\tfriday"}},
+		// anything else the parser reads is offered as typed, closed (a word
+		// holding a blank was quoted: see the first cases)
+		{[]string{"add", "d:[in 3 days"}, []string{"d:[in 3 days] \t2026/07/25 00:00\tin 3 days", "\tnospace"}},
+		{[]string{"add", "d:[nonsense"}, nil},
+		// a recurrence tag offers rules, described when the reading adds something
+		{[]string{"add", "walk r:[every w"}, []string{"walk r:[every weekday] \t\tevery weekday", "walk r:[every week] \t\tevery week",
+			"walk r:[every wednesday] \tevery week on Wednesday\tevery wednesday", "\tnospace"}},
+		{[]string{"add", "recurrence:[every 3 days"}, []string{"recurrence:[every 3 days] \t\tevery 3 days", "\tnospace"}},
+		{[]string{"add", "r:[every monday and fri"}, []string{"r:[every monday and fri] \tevery week on Monday, Friday\tevery monday and fri", "\tnospace"}},
+		{[]string{"add", "r:[daily"}, nil},
+		// a blank after some text offers the tags it doesn't carry yet
+		{[]string{"add", "walk the dog "}, []string{"walk the dog d:[\t" + dateHint + "\td:[", "walk the dog r:[\t" + recurrenceHint + "\tr:[",
+			"walk the dog b:[\ta board\tb:[", "\tnospace"}},
+		{[]string{"add", "walk", "the", "dog", ""}, []string{"d:[\t" + dateHint, "r:[\t" + recurrenceHint, "b:[\ta board", "\tnospace"}},
+		{[]string{"add", "walk d:[tomorrow] "}, []string{"walk d:[tomorrow] r:[\t" + recurrenceHint + "\tr:[", "walk d:[tomorrow] b:[\ta board\tb:[", "\tnospace"}},
+		{[]string{"add", "walk", "B:[work]", "date:[friday]", ""}, []string{"r:[\t" + recurrenceHint, "\tnospace"}},
+		{[]string{"add", ""}, nil},
+		{[]string{"add", "walk the dog"}, nil},
+		// a tag's first letters complete to the tag
+		{[]string{"add", "walk the dog d"}, []string{"walk the dog d:[\t" + dateHint + "\td:[", "\tnospace"}},
+		{[]string{"add", "walk", "rec"}, []string{"recurrence:[\t" + recurrenceHint, "\tnospace"}},
+		{[]string{"add", "walk d:[friday] d"}, nil},
+		// unquoted, a tag's value spans words: the candidate is the current word's end
+		{[]string{"add", "walk", "d:[next", "w"}, []string{"week]\t2026/07/29 00:00\tnext week"}},
+		{[]string{"add", "walk", "r:[every", "2", ""}, []string{"weeks]\t\tevery 2 weeks"}},
+		{[]string{"add", "walk", "d:[in", "3", "days"}, []string{"days]\t2026/07/25 00:00\tin 3 days"}},
+		{[]string{"add", "walk", "b:[my", "b"}, []string{"board]\t\tmy board"}},
+	}
+	for _, c := range cases {
+		got := complete(t, home, c.words...)
+		if c.want == nil {
+			c.want = []string{""}
+		}
+		if strings.Join(got, "\n") != strings.Join(c.want, "\n") {
+			t.Errorf("complete %q\n got %q\nwant %q", c.words, got, c.want)
+		}
+	}
+}
+
+// An empty date tag lists the phrases in the order the days come.
+func TestCompleteAddDateVocabulary(t *testing.T) {
+	home := completionHome(t)
+	var shown []string
+	for _, line := range complete(t, home, "add", "d:[") {
+		parts := strings.Split(line, "\t")
+		shown = append(shown, parts[2]+"="+parts[1])
+	}
+	equal(t, strings.Join(shown, "|"), "today=2026/07/22 00:00|tomorrow=2026/07/23 00:00|"+
+		"thursday=2026/07/23 00:00|friday=2026/07/24 00:00|saturday=2026/07/25 00:00|sunday=2026/07/26 00:00|"+
+		"monday=2026/07/27 00:00|tuesday=2026/07/28 00:00|wednesday=2026/07/22 00:00|"+
+		"next week=2026/07/29 00:00|next month=2026/08/22 00:00")
+}
+
+// editedLine types keys into a live interactive shell and returns the line as
+// the shell's editor holds it, printed by a key bound for that: add's text is
+// completed inside an open quote, so the line can't be run to read it back.
+func editedLine(t *testing.T, shell string, env []string, keys string) string {
+	t.Helper()
+	spawn := "zsh -d -i"
+	if shell == "bash" {
+		spawn = "bash --noprofile --rcfile $HOME/rc.bash -i"
+	}
+	out := zsh(t, env, `zpty z `+spawn+`
+sleep 0.4
+zpty -w -n z `+shellQuote(keys)+`
+sleep 0.7
+zpty -w -n z $'\x18\x04'
+sleep 0.3
+out=; while zpty -r -t z chunk; do out+=$chunk; done
+out=${out##*LINE<<}
+print -r -- "${out%%>>END*}"`)
+	return strings.TrimSuffix(out, "\n")
+}
+
+// TestShellsCompleteAddText: the shims carry add's text completion into the
+// line — only the new part listed, the quote left open, no blank added.
+func TestShellsCompleteAddText(t *testing.T) {
+	home := completionHome(t)
+	dir, env := zshEnv(t, home)
+	os.WriteFile(filepath.Join(dir, ".zshrc"), []byte(`eval "$(taskthing completion zsh)"
+dump() { print -r -- ""; print -r -- "LINE<<$BUFFER>>END" }
+zle -N dump; bindkey '^X^D' dump
+PROMPT=
+`), 0o644)
+	os.WriteFile(filepath.Join(dir, "rc.bash"), []byte(`eval "$(taskthing completion bash)"
+bind -x '"\C-x\C-d": echo "LINE<<$READLINE_LINE>>END"'
+PS1=
+`), 0o644)
+	cases := []struct{ shells, typed, want string }{
+		// several tags: listed, the text untouched
+		{"bash zsh", "taskthing add \"walk the dog \t", `taskthing add "walk the dog `},
+		{"bash zsh", "taskthing add \"walk the dog d\t", `taskthing add "walk the dog d:[`},
+		{"bash zsh", "taskthing add \"walk the dog d:[tom\t", `taskthing add "walk the dog d:[tomorrow] `},
+		{"bash zsh", "taskthing add \"walk the dog d:[to\t", `taskthing add "walk the dog d:[to`},
+		{"bash zsh", "taskthing add \"walk the dog b:[my\t", `taskthing add "walk the dog b:[my board] `},
+		// the whole flow, one TAB after another
+		{"bash zsh", "taskthing add \"walk \td\ttom\tr\tevery d\t", `taskthing add "walk d:[tomorrow] r:[every day] `},
+		// unquoted, word by word (zsh reads an unquoted [ as a glob)
+		{"bash", "taskthing add walk d\t", `taskthing add walk d:\[`},
+		{"bash", "taskthing add walk d:[next w\t", `taskthing add walk d:[next week\] `},
+		// what completed before still does
+		{"bash zsh", "taskthing check milk\t", "taskthing check " + number(t, home, "buy milk") + " "},
+		{"bash zsh", "taskthing check review\t", "taskthing check review"},
+	}
+	for _, shell := range []string{"bash", "zsh"} {
+		if _, err := exec.LookPath(shell); err != nil {
+			continue
+		}
+		for _, c := range cases {
+			if !strings.Contains(c.shells, shell) {
+				continue
+			}
+			t.Run(shell+" "+strings.ReplaceAll(c.typed, "\t", "<TAB>"), func(t *testing.T) {
+				t.Parallel()
+				if got := editedLine(t, shell, env, c.typed); got != c.want {
+					t.Errorf("got %q\nwant %q", got, c.want)
+				}
+			})
+		}
 	}
 }

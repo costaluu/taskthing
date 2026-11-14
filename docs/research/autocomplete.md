@@ -99,7 +99,16 @@ Cada item é um ciclo de TDD na emenda já existente: `__complete` testado como 
 8. **Busca tolerante** (lacuna 6): palavras fora de ordem e erro de digitação, com ordenação por relevância, o que depende do item 2.
 9. **Cache com validade para `--peer`**, a única chamada de rede.
 
-## 8. Perguntas em aberto
+## 8. Feito em 2026-11-14 (branch `autocomplete`)
+
+- **Protocolo:** terceira coluna opcional (`valor\tdescrição\texibição`), para candidatos longos listados só pelo trecho novo, e uma linha de diretiva sem valor (`\tnospace`). É a versão mínima do item 1 da seção 7; grupos ficaram de fora.
+- **Ordem preservada** (item 2): `complete -o nosort` no bash e `compadd -V` no zsh.
+- **Texto do `add`** (parte do item 4): tags oferecidas depois de um espaço ou pelas primeiras letras; datas, recorrências e boards dentro da tag aberta, em qualquer ponto do texto; texto livre validado pelo próprio parser e descrito pela data resolvida; valor de tag atravessando várias palavras sem aspas.
+- **Aspas abertas:** no zsh, `compadd -S ''` insere sem fechar a aspa. No bash, o readline fecha a aspa atrás de um candidato único mesmo com `nospace`; o shim devolve duas entradas que compartilham o texto, e o readline insere o prefixo comum sem fechar nada. Efeito colateral: com `show-all-if-ambiguous` ligado, as duas entradas aparecem listadas uma vez.
+- **Testes em shell real:** `TestShellsCompleteAddText` digita num bash e num zsh interativos via pty e lê a linha do editor por uma tecla ligada a isso, porque uma linha com aspa aberta não pode ser executada.
+- **Ainda sem candidatos:** `set date-time` e `list --period`.
+
+## 9. Perguntas em aberto
 
 - Sem listagem prévia, completar para o id de 21 caracteres é aceitável, ou o completion deveria numerar por conta própria? Numerar exigiria escrever na kv store, o que hoje é proibido para o completion.
 - A meta de latência deve valer para qual tamanho de workspace? O número de 10 mil tarefas é um chute.

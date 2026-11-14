@@ -36,7 +36,9 @@ taskthing install
 
 **Shell completion (bash, zsh).** `taskthing install` offers to turn it on; if you installed before completion existed, taskthing asks once on your next run. Either way it adds one line to `~/.bashrc` (`~/.bash_profile` on macOS) or `~/.zshrc`, which loads the script from the binary, so it keeps up with updates. No bash-completion package needed. To do it yourself: `taskthing completion install`.
 
-TAB completes commands, flags (`--opt value` and `--opt=value`), boards, workspaces, config values, `--peer` (peers already on the remote) and `--branch`, and tasks by the number your last `taskthing list` showed. Type part of a title instead (`taskthing check milk<TAB>`) and it becomes that task's number. In zsh, quote an `add` tag (`'b:[wor<TAB>`): zsh reads an unquoted `[` as a glob.
+TAB completes commands, flags (`--opt value` and `--opt=value`), boards, workspaces, config values, `--peer` (peers already on the remote) and `--branch`, and tasks by the number your last `taskthing list` showed. Type part of a title instead (`taskthing check milk<TAB>`) and it becomes that task's number.
+
+It also writes `add`'s tags with you. In `taskthing add "walk the dog <TAB>`, the blank after the title lists the tags the text doesn't carry yet (`d:[`, `r:[`, `b:[`); `d<TAB>` opens one; inside it, `d:[to<TAB>` lists `today` and `tomorrow` with the day each means, `r:[every <TAB>` lists recurrences, `b:[<TAB>` your boards. Anything else the parser reads (`d:[in 3 days<TAB>`) is closed and shown as the date it resolves to, so you see how it will be read before you run it. The quote stays open, so one TAB after another writes the whole line. Without quotes it works word by word in bash; in zsh, quote the text: zsh reads an unquoted `[` as a glob.
 
 ---
 

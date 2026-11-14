@@ -16,9 +16,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/costaluu/taskthing/internal/chrono"
 	"github.com/costaluu/taskthing/internal/js"
 	"github.com/costaluu/taskthing/internal/mdwal"
 	"github.com/costaluu/taskthing/internal/nodefs"
+	"github.com/costaluu/taskthing/internal/rrule"
 )
 
 // ── shell completion ─────────────────────────────────────────────────────────
@@ -34,7 +36,9 @@ var bashShim string
 //go:embed completion.zsh
 var zshShim string
 
-type candidate struct{ value, desc string }
+// candidate is one offer: the word it completes to, a description, and —
+// when the word is long and only its end is new — what to list it as.
+type candidate struct{ value, desc, display string }
 
 // completer offers the next word; it filters by cur itself, since a task
 // matches by its title, not by the number it completes to.
@@ -42,10 +46,13 @@ type completer func(c *Ctx, cur string) []candidate
 
 func printCandidates(cands []candidate) {
 	for _, c := range cands {
-		if c.desc == "" {
-			fmt.Println(c.value)
-		} else {
+		switch {
+		case c.display != "" && c.display != c.value:
+			fmt.Println(c.value + "\t" + c.desc + "\t" + c.display)
+		case c.desc != "":
 			fmt.Println(c.value + "\t" + c.desc)
+		default:
+			fmt.Println(c.value)
 		}
 	}
 }
@@ -128,10 +135,10 @@ func (c *CLI) complete(words []string) []candidate {
 		var out []candidate
 		for _, o := range cmd.Options {
 			if !slices.Contains(prev, "--"+o.Name) {
-				out = append(out, candidate{"--" + o.Name, o.Description})
+				out = append(out, candidate{value: "--" + o.Name, desc: o.Description})
 			}
 		}
-		return byPrefix(cur, append(out, candidate{"--help", "Show help"}))
+		return byPrefix(cur, append(out, candidate{value: "--help", desc: "Show help"}))
 	}
 	var out []candidate
 	if len(positional) == 0 {
@@ -153,7 +160,7 @@ func optionValues(o Option, c *Ctx, cur string) []candidate {
 func commandCandidates(cmds []*Command) []candidate {
 	out := make([]candidate, len(cmds))
 	for i, cmd := range cmds {
-		out[i] = candidate{cmd.Name, cmd.Description}
+		out[i] = candidate{value: cmd.Name, desc: cmd.Description}
 	}
 	return out
 }
@@ -223,7 +230,7 @@ func taskRefs(keep func(task *js.Object) bool, repeat bool) completer {
 			if err != nil || !keep(task) {
 				continue
 			}
-			if cand := (candidate{value, str(task, "title")}); entityMatch(cur, cand) {
+			if cand := (candidate{value: value, desc: str(task, "title")}); entityMatch(cur, cand) {
 				out = append(out, cand)
 			}
 		}
@@ -256,7 +263,7 @@ func boardCandidates(c *Ctx, deleted, inbox bool) []candidate {
 	}
 	for _, b := range boards {
 		if deleted {
-			out = append(out, candidate{str(b, "id"), str(b, "name")})
+			out = append(out, candidate{value: str(b, "id"), desc: str(b, "name")})
 		} else {
 			out = append(out, candidate{value: str(b, "name")})
 		}
@@ -376,21 +383,163 @@ func configArgs(c *Ctx, cur string) []candidate {
 	return nil
 }
 
-// openBoardTag is an add's `b:[…` tag still being typed.
-var openBoardTag = regexp.MustCompile(`(?i)^((?:b|board):\[)([^\]]*)$`)
+// openTag is the last tag of an add's text, still being typed: what precedes
+// its value (the tag included), the tag's name, and the value so far.
+var openTag = regexp.MustCompile(`(?is)^(.*(?:^|\s)(d|date|r|recurrence|b|board):\[)([^\]]*)$`)
 
+// nospace is a directive line, a description with no value: the shell adds
+// nothing after what it inserts — no blank, no closing quote.
+var nospace = candidate{desc: "nospace"}
+
+// lastWord is the text's last blank-separated word, and what precedes it.
+var lastWord = regexp.MustCompile(`(?s)^(.*?)(\S*)$`)
+
+var addTags = []struct {
+	names  []string
+	hint   string
+	closed *regexp.Regexp
+}{
+	{[]string{"d:[", "date:["}, "a date: today, tomorrow, friday, in 3 days, 25/12…", dateTag},
+	{[]string{"r:[", "recurrence:["}, "a recurrence: every day, every monday, every 2 weeks…", recurrenceTag},
+	{[]string{"b:[", "board:["}, "a board", boardTag},
+}
+
+// addArgs completes add's text, which is several words or one quoted word:
+// inside an open tag, the tag's values; after a blank, or at a tag's first
+// letters, the tags the text doesn't carry yet.
 func addArgs(c *Ctx, cur string) []candidate {
-	m := openBoardTag.FindStringSubmatch(cur)
-	if m == nil {
+	before := ""
+	if len(c.Positional) > 0 {
+		before = strings.Join(c.Positional, " ") + " "
+	}
+	text := before + cur
+	// A word holding a blank was quoted, and its text is still being
+	// written: the shell must not close the quote behind a candidate.
+	quoted := strings.ContainsAny(cur, " \t")
+
+	if m := openTag.FindStringSubmatch(text); m != nil {
+		var values []candidate
+		switch strings.ToLower(m[2])[0] {
+		case 'd':
+			values = datePhrases(m[3])
+		case 'r':
+			values = recurrencePhrases(m[3])
+		default:
+			values = byPrefixFold(m[3], boardCandidates(c, false, true))
+		}
+		var out []candidate
+		for _, v := range values {
+			// The whole text with the tag closed, cut down to the current word.
+			full := m[1] + v.value + "]"
+			if len(full) < len(before) || !strings.EqualFold(full[:len(before)], before) {
+				continue
+			}
+			word := full[len(before):]
+			if quoted {
+				word += " "
+			}
+			out = append(out, candidate{value: word, desc: v.desc, display: v.value})
+		}
+		if quoted && len(out) > 0 {
+			out = append(out, nospace)
+		}
+		return out
+	}
+
+	if js.Trim(text) == "" {
 		return nil
 	}
+	w := lastWord.FindStringSubmatch(cur)
 	var out []candidate
-	for _, b := range boardCandidates(c, false, true) {
-		if strings.HasPrefix(strings.ToLower(b.value), strings.ToLower(m[2])) {
-			out = append(out, candidate{value: m[1] + b.value + "]"})
+	for _, tag := range addTags {
+		if tag.closed.MatchString(text) {
+			continue
+		}
+		for _, name := range tag.names {
+			// After a blank only the short name is offered.
+			if (w[2] == "" && name == tag.names[0]) || (w[2] != "" && strings.HasPrefix(name, strings.ToLower(w[2]))) {
+				out = append(out, candidate{value: w[1] + name, desc: tag.hint, display: name})
+				break
+			}
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return append(out, nospace)
+}
+
+func byPrefixFold(cur string, cands []candidate) []candidate {
+	var out []candidate
+	for _, c := range cands {
+		if strings.HasPrefix(strings.ToLower(c.value), strings.ToLower(cur)) {
+			out = append(out, c)
 		}
 	}
 	return out
+}
+
+// recurrencePhrases are rules to offer for what's typed — the everyday ones,
+// or the typed text itself if it is a rule — described by how the parser
+// reads them, when that says more than the phrase.
+func recurrencePhrases(typed string) []candidate {
+	phrases := []string{"every day", "every weekday", "every week", "every 2 weeks", "every month", "every year"}
+	for i := 1; i <= 7; i++ {
+		phrases = append(phrases, "every "+weekdays[i%7])
+	}
+	described := func(phrase string) (candidate, bool) {
+		rule, err := rrule.FromText(phrase)
+		if err != nil || !rule.Orig.Present("freq") {
+			return candidate{}, false
+		}
+		c := candidate{value: phrase}
+		if text := rule.ToText(); text != phrase {
+			c.desc = text
+		}
+		return c, true
+	}
+	return phrasesFor(typed, phrases, described)
+}
+
+// phrasesFor offers the phrases that start like what's typed, or — when
+// none does — the typed text itself, if described reads it.
+func phrasesFor(typed string, phrases []string, described func(string) (candidate, bool)) []candidate {
+	var out []candidate
+	for _, p := range phrases {
+		if c, ok := described(p); ok {
+			out = append(out, c)
+		}
+	}
+	if out = byPrefixFold(js.Trim(typed), out); len(out) > 0 {
+		return out
+	}
+	if c, ok := described(js.Trim(typed)); ok {
+		return []candidate{c}
+	}
+	return nil
+}
+
+var weekdays = []string{"sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"}
+
+// datePhrases are dates to offer for what's typed, each described by the day
+// the parser reads it as: the everyday phrases, in the order their days come,
+// or — when none starts like it — the typed text itself, if it is a date.
+func datePhrases(typed string) []candidate {
+	config, err := readConfig()
+	if err != nil {
+		return nil
+	}
+	format := cfgDateFormat(config)
+	phrases := []string{"today", "tomorrow"}
+	for i := 1; i <= 7; i++ {
+		phrases = append(phrases, weekdays[(now().GetUTCDay()+i)%7])
+	}
+	phrases = append(phrases, "next week", "next month")
+	described := func(phrase string) (candidate, bool) {
+		d, ok := chrono.ParseNaturalDate(phrase, now(), format)
+		return candidate{value: phrase, desc: absoluteDateTime(d, format)}, ok
+	}
+	return phrasesFor(typed, phrases, described)
 }
 
 // peerValue: the peers already on the remote typed before — rejoining one is
@@ -399,7 +548,7 @@ func peerValue(c *Ctx, cur string) []candidate {
 	var out []candidate
 	root, _ := targetWorkspace(workspaceFlag(c))
 	if name, err := resolveGitAuthor(root); err == nil {
-		out = append(out, candidate{name, "your git user.name"})
+		out = append(out, candidate{value: name, desc: "your git user.name"})
 	}
 	if url := first(c.Positional); url != "" {
 		// ponytail: a network call on TAB, bounded so a slow or
@@ -414,7 +563,7 @@ func peerValue(c *Ctx, cur string) []candidate {
 			_, ref, _ := strings.Cut(line, "\t")
 			name := strings.TrimPrefix(ref, "refs/heads/users/")
 			if !slices.ContainsFunc(out, func(p candidate) bool { return p.value == name }) {
-				out = append(out, candidate{name, "a peer on the remote — rejoin as it"})
+				out = append(out, candidate{value: name, desc: "a peer on the remote — rejoin as it"})
 			}
 		}
 	}
@@ -426,7 +575,7 @@ func branchValue(c *Ctx, cur string) []candidate {
 	out := plain("master")
 	if root, err := targetWorkspace(workspaceFlag(c)); err == nil {
 		if name, err := resolveGitAuthor(root); err == nil {
-			out = append(out, candidate{"users/" + name, "your peer branch"})
+			out = append(out, candidate{value: "users/" + name, desc: "your peer branch"})
 		}
 	}
 	return byPrefix(cur, out)
