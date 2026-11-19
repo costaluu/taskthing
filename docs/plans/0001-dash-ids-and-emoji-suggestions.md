@@ -1,6 +1,6 @@
 # Plano: ids que começam com `-` e sugestão de emoji para boards
 
-Escrito em 2026-11-14, na branch `autocomplete` (HEAD `afc2b76`). Frente 1 implementada na branch `dash-ids` em 2026-11-14; as frentes 2 e 3 não estão implementadas. São três frentes independentes, na ordem em que eu as faria:
+Escrito em 2026-11-14, na branch `autocomplete` (HEAD `afc2b76`). Frente 1 implementada na branch `dash-ids` em 2026-11-14. **Atualização 2026-11-18:** as frentes 2 e 3 foram substituídas por um seletor de emoji interativo (`internal/emoji` + `internal/app/emojipicker.go`, branch `emoji-picker`): busca por nome e palavras-chave do CLDR em inglês, sem embedding e sem sugestão automática. As seções 2 e 3 abaixo ficam como registro do estudo. São três frentes independentes, na ordem em que eu as faria:
 
 1. Ids que começam com `-` (corrige um defeito real e um teste instável).
 2. Sugestão de emoji por palavras-chave do Unicode (CLDR).

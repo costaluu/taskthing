@@ -116,15 +116,17 @@ A full id works wherever a number does, including one that starts with a `-` (th
 
 | Command                                    | What it does                                                 |
 | ------------------------------------------ | ------------------------------------------------------------ |
-| `board add "<name>" [--icon=<glyph>]`      | Create a board                                               |
+| `board add "<name>" [--icon=<glyph>]`      | Create a board; without `--icon`, on a terminal, pick an emoji |
 | `board list` (or the `boards` shortcut)    | List boards, numbered                                        |
 | `board set name <id> <new-name>`           | Rename a board                                               |
-| `board set icon <id> <icon>`               | Set a board's icon                                           |
+| `board set icon <id> [<icon>]`             | Set a board's icon; with no icon, on a terminal, pick one    |
 | `board set color <id> <ansi-color>`        | Set a board's colour (ANSI 16)                               |
 | `board delete <id>` / `board recover <id>` | Soft-delete / restore a board (its tasks fall back to inbox) |
 | `board delete <id> --tasks`                | Soft-delete a board and its tasks                            |
 | `board clear <id>`                         | Soft-delete every task of a board, keeping the board         |
 | `board switch <from> <to>`                 | Move a board's tasks to another (either may be `inbox`)      |
+
+**Emoji picker.** On a terminal, `board add` without `--icon` (and `board set icon <id>` without a value) opens a search box over the Unicode emoji list (English names and CLDR keywords): type to narrow, ↑/↓ to move, Enter to pick, Esc to skip. The board's name seeds the search. Before you type, it lists common board icons with nothing highlighted, so a bare Enter picks nothing: `board add` creates the board without an icon and `board set icon` clears it. Esc leaves things as they were. Off a terminal nothing is asked.
 
 ### Workspaces
 

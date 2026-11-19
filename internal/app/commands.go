@@ -529,6 +529,14 @@ func setBoardField(field, action, predicate, connector string, value completer) 
 						return entityOutcome{}, err
 					}
 				}
+				if field == "icon" && len(c.Positional) == 1 {
+					// no value typed: pick one. Enter on nothing clears the icon (as a
+					// script's `board set icon <board>` does); escape changes nothing.
+					var cancelled bool
+					if next, cancelled = askIcon(str(board, "name")); cancelled {
+						return entityOutcome{}, errors.New("cancelled, icon unchanged")
+					}
+				}
 				if field == "color" && next != "" {
 					if _, ok := foreground[next]; !ok {
 						return entityOutcome{}, fmt.Errorf("not a colour: %s — try one of %s, or nothing to clear it", next, strings.Join(inkColorNames, ", "))
@@ -565,6 +573,9 @@ func boardCommand() *Command {
 						}
 						if err := assertBoardNameFree(boardRepository(m), name, ""); err != nil {
 							return entityOutcome{}, err
+						}
+						if icon == "" {
+							icon, _ = askIcon(name) // escape and an empty enter both mean no icon
 						}
 						if _, err := boardRepository(m).create(js.Obj("name", name, "icon", icon)); err != nil {
 							return entityOutcome{}, err
